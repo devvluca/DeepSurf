@@ -7,7 +7,7 @@ const Footer = () => (
         <div>
           <div className="flex items-center space-x-2 mb-4">
             <img 
-              src="/lovable-uploads/deepsurf.png" 
+              src="/img/deepsurf.png" 
               alt="DeepSurf Logo" 
               className="h-8 w-8"
             />

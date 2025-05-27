@@ -66,6 +66,13 @@ const Index = () => {
       
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-ocean-900 via-ocean-800 to-ocean-600 min-h-screen flex items-center">
+        {/* Banner de fundo */}
+        <img
+          src="/img/banner.jpg"
+          alt="Banner DeepSurf"
+          className="absolute inset-0 w-full h-full object-cover object-center z-0"
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
+        />
         <div className="absolute inset-0 wave-animation opacity-20"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent"></div>
         
@@ -119,20 +126,20 @@ const Index = () => {
                   <CardTitle className="text-white flex items-center justify-between">
                     <div className="flex items-center">
                       <Waves className="h-5 w-5 mr-2 text-ocean-300" />
-                      Condições Atuais - {getBeachName()}
+                      <span className="text-lg font-semibold">Condições Atuais - </span>
+                      <Select value={selectedBeach} onValueChange={setSelectedBeach}>
+                        <SelectTrigger className="w-auto bg-transparent border-none p-0 h-auto min-h-0 text-white font-semibold text-lg hover:underline focus:ring-0 focus:border-none shadow-none ml-1">
+                          <span className="underline cursor-pointer">{getBeachName()}</span>
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {beaches.map((beach) => (
+                            <SelectItem key={beach.id} value={beach.id}>
+                              {beach.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Select value={selectedBeach} onValueChange={setSelectedBeach}>
-                      <SelectTrigger className="w-48 bg-white/20 border-white/30 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        {beaches.map((beach) => (
-                          <SelectItem key={beach.id} value={beach.id}>
-                            {beach.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

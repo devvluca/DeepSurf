@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Header from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,22 +102,42 @@ const About = () => {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Luca Aguiar</h3>
                 <p className="text-ocean-600 font-medium mb-4">Engenheiro de Software & Surfista</p>
                 <p className="text-gray-600 leading-relaxed mb-6">
-                  Desenvolvedor full-stack apaixonado por tecnologia e surf. Com mais de 8 anos de experiência 
-                  em desenvolvimento de software e 15 anos surfando, decidiu combinar suas duas paixões para 
+                  Desenvolvedor full-stack apaixonado por tecnologia e surf. Com mais de 3 anos de experiência 
+                  em desenvolvimento de software e 2 anos surfando, decidiu combinar suas duas paixões para 
                   criar a DeepSurf. Especialista em machine learning e análise de dados meteorológicos.
                 </p>
                 <div className="flex justify-center md:justify-start space-x-4">
                   <Button variant="outline" size="sm">
                     <Mail className="h-4 w-4 mr-2" />
-                    luca@deepsurf.com
+                    lucanobre1@gmail.com
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Linkedin className="h-4 w-4 mr-2" />
-                    LinkedIn
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <a
+                      href="https://www.linkedin.com/in/lucaaguiar/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Linkedin className="h-4 w-4 mr-2" />
+                      LinkedIn
+                    </a>
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Github className="h-4 w-4 mr-2" />
-                    GitHub
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <a
+                      href="https://github.com/devvluca"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Github className="h-4 w-4 mr-2" />
+                      GitHub
+                    </a>
                   </Button>
                 </div>
               </div>
@@ -190,13 +209,31 @@ const About = () => {
               sugira melhorias ou compartilhe sua experiência conosco.
             </p>
             <div className="flex justify-center space-x-4">
-              <Button className="bg-red-500 hover:bg-red-600 text-white">
-                <Bug className="h-4 w-4 mr-2" />
-                Reportar Bug
+              <Button
+                className="bg-red-500 hover:bg-red-600 text-white"
+                asChild
+              >
+                <a
+                  href="https://wa.me/5581995167157?text=Ol%C3%A1%2C%20encontrei%20um%20bug%20no%20DeepSurf%20e%20gostaria%20de%20reportar%3A%20"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Bug className="h-4 w-4 mr-2" />
+                  Reportar Bug
+                </a>
               </Button>
-              <Button variant="outline">
-                <Heart className="h-4 w-4 mr-2" />
-                Enviar Feedback
+              <Button
+                variant="outline"
+                asChild
+              >
+                <a
+                  href="https://wa.me/5581995167157?text=Ol%C3%A1!%20Tenho%20uma%20sugest%C3%A3o%20para%20o%20DeepSurf%3A%20"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Heart className="h-4 w-4 mr-2" />
+                  Enviar Feedback
+                </a>
               </Button>
             </div>
           </CardContent>

@@ -72,7 +72,7 @@ const Header = () => {
           {/* Logo */}
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
             <img 
-              src="/lovable-uploads/deepsurf.png" 
+              src="/img/deepsurf.png" 
               alt="DeepSurf Logo" 
               className="h-10 w-10"
             />
