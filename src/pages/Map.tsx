@@ -1,6 +1,6 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,84 +9,98 @@ import { MapPin, Waves, Wind, Thermometer, Star, Eye } from 'lucide-react';
 const Map = () => {
   const [selectedBeach, setSelectedBeach] = useState<string | null>(null);
 
+  // Ordem e nomes atualizados conforme solicitado
   const beaches = [
     {
-      id: '1',
-      name: 'Praia do Futuro',
-      city: 'Fortaleza, CE',
-      coordinates: { lat: -3.7222, lng: -38.4856 },
-      surfability: 5,
-      waveHeight: '2.1m',
-      period: '12s',
-      wind: '15 km/h SW',
-      temperature: '24°C',
-      description: 'Condições excelentes para surf com ondas consistentes',
-      color: 'bg-green-500'
-    },
-    {
-      id: '2',
-      name: 'Praia de Iracema',
-      city: 'Fortaleza, CE',
-      coordinates: { lat: -3.7188, lng: -38.5200 },
-      surfability: 3,
-      waveHeight: '1.5m',
-      period: '8s',
-      wind: '20 km/h E',
-      temperature: '25°C',
-      description: 'Condições moderadas, ideal para iniciantes',
-      color: 'bg-yellow-500'
-    },
-    {
-      id: '3',
-      name: 'Praia de Copacabana',
-      city: 'Rio de Janeiro, RJ',
-      coordinates: { lat: -22.9711, lng: -43.1822 },
+      id: 'praia-paiva',
+      name: 'Praia do Paiva',
+      city: 'Cabo de Santo Agostinho, PE',
+      coordinates: { lat: -8.3197, lng: -34.9632 },
       surfability: 4,
       waveHeight: '1.8m',
       period: '10s',
-      wind: '12 km/h S',
-      temperature: '22°C',
-      description: 'Boas condições com vento favorável',
+      wind: '14 km/h E',
+      temperature: '27°C',
+      description: 'Boas ondas e ambiente tranquilo.',
       color: 'bg-blue-500'
     },
     {
-      id: '4',
-      name: 'Praia da Joaquina',
-      city: 'Florianópolis, SC',
-      coordinates: { lat: -27.6289, lng: -48.4486 },
+      id: 'porto-de-galinhas',
+      name: 'Porto de Galinhas',
+      city: 'Ipojuca, PE',
+      coordinates: { lat: -8.5083, lng: -35.0031 },
+      surfability: 5,
+      waveHeight: '2.2m',
+      period: '12s',
+      wind: '12 km/h SE',
+      temperature: '28°C',
+      description: 'Excelente para surfistas experientes.',
+      color: 'bg-green-500'
+    },
+    {
+      id: 'praia-cupe',
+      name: 'Praia do Cupe',
+      city: 'Ipojuca, PE',
+      coordinates: { lat: -8.4746, lng: -34.9731 },
+      surfability: 3,
+      waveHeight: '1.3m',
+      period: '8s',
+      wind: '16 km/h E',
+      temperature: '27°C',
+      description: 'Ondas moderadas, ideal para todos os níveis.',
+      color: 'bg-yellow-500'
+    },
+    {
+      id: 'praia-pipa',
+      name: 'Praia de Pipa',
+      city: 'Tibau do Sul, RN',
+      coordinates: { lat: -6.2333, lng: -35.0500 },
+      surfability: 4,
+      waveHeight: '1.7m',
+      period: '11s',
+      wind: '10 km/h NE',
+      temperature: '26°C',
+      description: 'Praia badalada com boas ondas.',
+      color: 'bg-blue-500'
+    },
+    {
+      id: 'fernando-noronha',
+      name: 'Fernando de Noronha',
+      city: 'Fernando de Noronha, PE',
+      coordinates: { lat: -3.8571, lng: -32.4297 },
       surfability: 5,
       waveHeight: '2.5m',
       period: '14s',
-      wind: '10 km/h SW',
-      temperature: '19°C',
-      description: 'Condições perfeitas para surf profissional',
-      color: 'bg-green-600'
+      wind: '8 km/h E',
+      temperature: '29°C',
+      description: 'Condições perfeitas, paraíso do surf.',
+      color: 'bg-green-500'
     },
     {
-      id: '5',
-      name: 'Praia de Itacoatiara',
-      city: 'Niterói, RJ',
-      coordinates: { lat: -22.9644, lng: -43.0489 },
+      id: 'praia-maracaipe',
+      name: 'Praia de Maracaípe',
+      city: 'Ipojuca, PE',
+      coordinates: { lat: -8.5266, lng: -35.0086 },
       surfability: 2,
-      waveHeight: '0.8m',
-      period: '6s',
-      wind: '25 km/h N',
-      temperature: '23°C',
-      description: 'Condições fracas devido ao vento forte',
+      waveHeight: '1.0m',
+      period: '7s',
+      wind: '18 km/h SE',
+      temperature: '27°C',
+      description: 'Ondas fracas, bom para iniciantes.',
       color: 'bg-red-500'
     },
     {
-      id: '6',
-      name: 'Praia do Rosa',
-      city: 'Imbituba, SC',
-      coordinates: { lat: -28.1744, lng: -48.6389 },
-      surfability: 4,
-      waveHeight: '2.0m',
-      period: '11s',
-      wind: '8 km/h SW',
-      temperature: '18°C',
-      description: 'Ondas consistentes com pouco vento',
-      color: 'bg-blue-500'
+      id: 'enseada-dos-corais',
+      name: 'Enseada dos Corais',
+      city: 'Cabo de Santo Agostinho, PE',
+      coordinates: { lat: -8.3472, lng: -34.9561 },
+      surfability: 3,
+      waveHeight: '1.4m',
+      period: '9s',
+      wind: '15 km/h E',
+      temperature: '27°C',
+      description: 'Ondas moderadas e ambiente familiar.',
+      color: 'bg-yellow-500'
     }
   ];
 
@@ -112,10 +126,48 @@ const Map = () => {
     }
   };
 
+  // Zoom/Pan state
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const offsetStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Mouse events for pan
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    offsetStart.current = { ...offset };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!dragging) return;
+    const dx = e.clientX - (dragStart.current?.x || 0);
+    const dy = e.clientY - (dragStart.current?.y || 0);
+    setOffset({
+      x: offsetStart.current.x + dx,
+      y: offsetStart.current.y + dy,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setDragging(false);
+  };
+
+  // Posições dos pins no SVG (ajuste conforme necessário)
+  const pinPositions: Record<string, { x: number; y: number }> = {
+    'Praia do Paiva': { x: 670, y: 350 },
+    'Porto de Galinhas': { x: 690, y: 370 },
+    'Praia do Cupe': { x: 680, y: 360 },
+    'Praia de Pipa': { x: 740, y: 220 },
+    'Fernando de Noronha': { x: 900, y: 120 },
+    'Praia de Maracaípe': { x: 695, y: 380 },
+    'Enseada dos Corais': { x: 660, y: 340 }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -141,36 +193,67 @@ const Map = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-full">
-                {/* Simplified Map Representation */}
-                <div className="relative bg-blue-50 rounded-lg h-full overflow-hidden">
-                  {/* Brazil-like coastline representation */}
-                  <div className="absolute inset-4 bg-gradient-to-b from-green-100 to-yellow-100 rounded-lg opacity-60"></div>
-                  
-                  {/* Beach markers positioned roughly like Brazilian coast */}
-                  {beaches.map((beach) => (
-                    <div
-                      key={beach.id}
-                      className={`absolute w-6 h-6 rounded-full cursor-pointer shadow-lg border-2 border-white hover:scale-110 transition-transform ${beach.color}`}
-                      style={{
-                        top: beach.name.includes('Fortaleza') ? '15%' :
-                             beach.name.includes('Rio') ? '60%' :
-                             beach.name.includes('Florianópolis') || beach.name.includes('Imbituba') ? '85%' :
-                             beach.name.includes('Niterói') ? '58%' : '50%',
-                        left: beach.name.includes('Fortaleza') ? '30%' :
-                              beach.name.includes('Rio') || beach.name.includes('Niterói') ? '70%' :
-                              beach.name.includes('Florianópolis') || beach.name.includes('Imbituba') ? '60%' : '50%'
-                      }}
-                      onClick={() => setSelectedBeach(beach.id)}
-                      title={beach.name}
-                    >
-                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded text-xs font-medium shadow-lg opacity-0 hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {beach.name}
+                <div
+                  className="relative w-full h-[500px] flex items-center justify-center select-none"
+                  style={{ cursor: dragging ? 'grabbing' : 'grab' }}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                  onWheel={e => {
+                    e.preventDefault();
+                    // Proíbe scroll da página ao dar zoom no mapa
+                    let newZoom = zoom - e.deltaY * 0.001;
+                    newZoom = Math.max(0.5, Math.min(2.5, newZoom));
+                    setZoom(newZoom);
+                  }}
+                >
+                  {/* SVG MAPA como fundo */}
+                  <img
+                    src="/img/mapa-brasil.svg"
+                    alt="Mapa Cartoon Brasil"
+                    className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+                    draggable={false}
+                    style={{
+                      transform: `translate(${offset.x}px,${offset.y}px) scale(${zoom})`,
+                      transition: dragging ? 'none' : 'transform 0.1s',
+                    }}
+                  />
+                  {/* Pins estilo div, fixos na posição do mapa, não arrastam junto */}
+                  {beaches.map((beach) => {
+                    const pos = pinPositions[beach.name] || { x: 512, y: 512 };
+                    const top = `${(pos.y / 1024) * 100}%`;
+                    const left = `${(pos.x / 1024) * 100}%`;
+                    return (
+                      <div
+                        key={beach.id}
+                        className={`absolute w-6 h-6 rounded-full cursor-pointer shadow-lg border-2 border-white hover:scale-110 transition-transform ${beach.color}`}
+                        style={{
+                          top,
+                          left,
+                          transform: 'translate(-50%, -50%)',
+                          zIndex: 2,
+                          // Não aplica zoom/offset nos pins
+                        }}
+                        onClick={() => setSelectedBeach(beach.id)}
+                        title={beach.name}
+                      >
+                        <span className="w-full h-full flex items-center justify-center font-bold text-xs text-white select-none">
+                          {beach.surfability}★
+                        </span>
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded text-xs font-medium shadow-lg opacity-0 hover:opacity-100 transition-opacity whitespace-nowrap">
+                          {beach.name}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-
-                  {/* Legend */}
-                  <div className="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg">
+                    );
+                  })}
+                  {/* Zoom controls */}
+                  <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
+                    <Button size="icon" variant="outline" onClick={() => setZoom(z => Math.min(z + 0.2, 2.5))}>+</Button>
+                    <Button size="icon" variant="outline" onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))}>-</Button>
+                  </div>
+                  {/* Legenda */}
+                  <div className="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg w-fit">
                     <h3 className="font-semibold mb-2 text-sm">Legenda</h3>
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center space-x-2">
@@ -327,6 +410,7 @@ const Map = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
