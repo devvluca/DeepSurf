@@ -31,7 +31,7 @@ const Profile = () => {
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
   const [newSession, setNewSession] = useState({
-    date: '',
+    date: new Date().toISOString().split('T')[0], // Data de hoje como padrão
     location: '',
     duration: '',
     waves: '',
@@ -116,7 +116,7 @@ const Profile = () => {
     if (!error && data) {
       setSurfSessions([data[0], ...surfSessions]);
       setNewSession({
-        date: '',
+        date: new Date().toISOString().split('T')[0], // Resetar para hoje novamente
         location: '',
         duration: '',
         waves: '',
@@ -580,40 +580,66 @@ const Profile = () => {
                         type="date"
                         value={newSession.date}
                         onChange={e => setNewSession({ ...newSession, date: e.target.value })}
-                        className="w-32"
+                        className="w-32 cursor-pointer"
+                        onClick={(e) => e.currentTarget.showPicker?.()}
                       />
                     </div>
                     <div>
                       <Label htmlFor="location">Local</Label>
-                      <Input
-                        id="location"
-                        type="text"
+                      <Select
                         value={newSession.location}
-                        onChange={e => setNewSession({ ...newSession, location: e.target.value })}
-                        className="w-40"
-                      />
+                        onValueChange={v => setNewSession({ ...newSession, location: v })}
+                      >
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="Escolha..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Paiva">Praia do Paiva</SelectItem>
+                          <SelectItem value="Porto de Galinhas">Porto de Galinhas</SelectItem>
+                          <SelectItem value="Cupe">Praia do Cupe</SelectItem>
+                          <SelectItem value="Maracaípe">Praia de Maracaípe</SelectItem>
+                          <SelectItem value="Outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="duration">Duração</Label>
-                      <Input
-                        id="duration"
-                        type="text"
-                        placeholder="Ex: 2h 30min"
+                      <Select
                         value={newSession.duration}
-                        onChange={e => setNewSession({ ...newSession, duration: e.target.value })}
-                        className="w-24"
-                      />
+                        onValueChange={v => setNewSession({ ...newSession, duration: v })}
+                      >
+                        <SelectTrigger className="w-24">
+                          <SelectValue placeholder="Tempo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1h">1h</SelectItem>
+                          <SelectItem value="2h">2h</SelectItem>
+                          <SelectItem value="3h">3h</SelectItem>
+                          <SelectItem value="4h">4h</SelectItem>
+                          <SelectItem value="5h">5h</SelectItem>
+                          <SelectItem value="6h">6h</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="waves">Ondas</Label>
-                      <Input
-                        id="waves"
-                        type="text"
-                        placeholder="Ex: 2.1m"
+                      <Select
                         value={newSession.waves}
-                        onChange={e => setNewSession({ ...newSession, waves: e.target.value })}
-                        className="w-20"
-                      />
+                        onValueChange={v => setNewSession({ ...newSession, waves: v })}
+                      >
+                        <SelectTrigger className="w-24">
+                          <SelectValue placeholder="Altura" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0.5m">0.5m</SelectItem>
+                          <SelectItem value="1.0m">1.0m</SelectItem>
+                          <SelectItem value="1.5m">1.5m</SelectItem>
+                          <SelectItem value="2.0m">2.0m</SelectItem>
+                          <SelectItem value="2.5m">2.5m</SelectItem>
+                          <SelectItem value="3.0m">3.0m</SelectItem>
+                          <SelectItem value="3.0m+">3.0m+</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="rating">Nota</Label>
@@ -626,7 +652,7 @@ const Profile = () => {
                         </SelectTrigger>
                         <SelectContent>
                           {[1,2,3,4,5].map(n => (
-                            <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                            <SelectItem key={n} value={String(n)}>{n}★</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -659,38 +685,65 @@ const Profile = () => {
                               type="date"
                               value={session.date}
                               onChange={e => setSurfSessions(surfSessions.map(s => s.id === session.id ? { ...s, date: e.target.value } : s))}
-                              className="w-32"
+                              className="w-32 cursor-pointer"
+                              onClick={(e) => e.currentTarget.showPicker?.()}
                             />
                           </div>
                           <div>
                             <Label htmlFor={`location-edit-${session.id}`}>Local</Label>
-                            <Input
-                              id={`location-edit-${session.id}`}
-                              type="text"
+                            <Select
                               value={session.location}
-                              onChange={e => setSurfSessions(surfSessions.map(s => s.id === session.id ? { ...s, location: e.target.value } : s))}
-                              className="w-40"
-                            />
+                              onValueChange={v => setSurfSessions(surfSessions.map(s => s.id === session.id ? { ...s, location: v } : s))}
+                            >
+                              <SelectTrigger className="w-40">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Paiva">Praia do Paiva</SelectItem>
+                                <SelectItem value="Porto de Galinhas">Porto de Galinhas</SelectItem>
+                                <SelectItem value="Cupe">Praia do Cupe</SelectItem>
+                                <SelectItem value="Maracaípe">Praia de Maracaípe</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div>
                             <Label htmlFor={`duration-edit-${session.id}`}>Duração</Label>
-                            <Input
-                              id={`duration-edit-${session.id}`}
-                              type="text"
+                            <Select
                               value={session.duration}
-                              onChange={e => setSurfSessions(surfSessions.map(s => s.id === session.id ? { ...s, duration: e.target.value } : s))}
-                              className="w-24"
-                            />
+                              onValueChange={v => setSurfSessions(surfSessions.map(s => s.id === session.id ? { ...s, duration: v } : s))}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1h">1h</SelectItem>
+                                <SelectItem value="2h">2h</SelectItem>
+                                <SelectItem value="3h">3h</SelectItem>
+                                <SelectItem value="4h">4h</SelectItem>
+                                <SelectItem value="5h">5h</SelectItem>
+                                <SelectItem value="6h">6h</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div>
                             <Label htmlFor={`waves-edit-${session.id}`}>Ondas</Label>
-                            <Input
-                              id={`waves-edit-${session.id}`}
-                              type="text"
+                            <Select
                               value={session.waves}
-                              onChange={e => setSurfSessions(surfSessions.map(s => s.id === session.id ? { ...s, waves: e.target.value } : s))}
-                              className="w-20"
-                            />
+                              onValueChange={v => setSurfSessions(surfSessions.map(s => s.id === session.id ? { ...s, waves: v } : s))}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0.5m">0.5m</SelectItem>
+                                <SelectItem value="1.0m">1.0m</SelectItem>
+                                <SelectItem value="1.5m">1.5m</SelectItem>
+                                <SelectItem value="2.0m">2.0m</SelectItem>
+                                <SelectItem value="2.5m">2.5m</SelectItem>
+                                <SelectItem value="3.0m">3.0m</SelectItem>
+                                <SelectItem value="3.0m+">3.0m+</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div>
                             <Label htmlFor={`rating-edit-${session.id}`}>Nota</Label>
@@ -699,11 +752,11 @@ const Profile = () => {
                               onValueChange={v => setSurfSessions(surfSessions.map(s => s.id === session.id ? { ...s, rating: Number(v) } : s))}
                             >
                               <SelectTrigger className="w-20">
-                                <SelectValue placeholder="Nota" />
+                                <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 {[1,2,3,4,5].map(n => (
-                                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                                  <SelectItem key={n} value={String(n)}>{n}★</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
