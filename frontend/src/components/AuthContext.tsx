@@ -3,12 +3,13 @@ import { supabase } from '@/lib/supabaseClient';
 
 type Profile = {
   id: string;
-  name: string;
-  email: string;
+  name?: string;
+  email?: string;
   board_type?: string;
   weight?: number;
   level?: string;
   preferences?: string;
+  updated_at?: string;
 };
 
 type AuthContextType = {
@@ -37,50 +38,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Busca perfil do usuário autenticado
-  const fetchProfile = async (userId: string, email: string, user_metadata?: any) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    if (data) {
-      setUser({ ...data, email });
-    } else {
-      // Se não existir, cria um perfil básico com nome do Google se houver
-      const name = user_metadata?.name || user_metadata?.full_name || '';
-      const { error: insertError } = await supabase.from('profiles').insert([{ id: userId, name, email }]);
-      if (insertError) {
-        console.error('Erro ao criar perfil:', insertError);
-        setLoading(false);
-        return;
-      }
-      setUser({ id: userId, name, email });
-    }
-  };
-
   useEffect(() => {
-    const getSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      const session = data.session;
-      if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email || '', session.user.user_metadata);
+    // Buscar usuário inicial
+    const getInitialUser = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        // Usar dados básicos do auth sem buscar perfil
+        setUser({
+          id: authUser.id,
+          name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || '',
+          email: authUser.email || ''
+        });
       }
       setLoading(false);
     };
-    getSession();
+    getInitialUser();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Listener para mudanças de auth
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email || '', session.user.user_metadata);
+        setUser({
+          id: session.user.id,
+          name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || '',
+          email: session.user.email || ''
+        });
       } else {
         setUser(null);
       }
+      setLoading(false);
     });
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    return () => subscription?.subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -112,8 +100,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updates = { ...data, updated_at: new Date().toISOString() };
     const { error } = await supabase
       .from('profiles')
-      .update(updates)
-      .eq('id', user.id);
+      .upsert({ id: user.id, ...updates })
+      .select()
+      .single();
     if (error) throw error;
     setUser({ ...user, ...updates });
   };

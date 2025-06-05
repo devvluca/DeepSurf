@@ -14,6 +14,8 @@ import { supabase } from '@/lib/supabaseClient';
 
 const Profile = () => {
   const { user, updateProfile, loading: authLoading } = useAuth();
+  const [profileData, setProfileData] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -37,17 +39,45 @@ const Profile = () => {
     notes: ''
   });
 
-  // Atualiza formData quando user mudar
+  // Busca perfil do banco quando usuário carrega
   useEffect(() => {
-    setFormData({
-      name: user?.name || '',
-      email: user?.email || '',
-      boardType: user?.board_type || '',
-      weight: user?.weight || 0,
-      level: user?.level || '',
-      preferences: user?.preferences || ''
-    });
+    const fetchProfile = async () => {
+      if (!user) return;
+      setProfileLoading(true);
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setProfileData(data);
+      } else {
+        // Cria perfil se não existir
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          name: user.name,
+          email: user.email
+        });
+        setProfileData({ id: user.id, name: user.name, email: user.email });
+      }
+      setProfileLoading(false);
+    };
+    fetchProfile();
   }, [user]);
+
+  // Atualiza formData quando profileData mudar
+  useEffect(() => {
+    if (profileData) {
+      setFormData({
+        name: profileData.name || '',
+        email: profileData.email || '',
+        boardType: profileData.board_type || '',
+        weight: profileData.weight || 0,
+        level: profileData.level || '',
+        preferences: profileData.preferences || ''
+      });
+    }
+  }, [profileData]);
 
   // Busca sessões do usuário
   useEffect(() => {
@@ -167,27 +197,129 @@ const Profile = () => {
     }));
   }, [surfSessions]);
 
-  // Placeholder recommendations - replace with your own logic or API call
-  const recommendations = [
-    {
-      location: 'Praia do Futuro',
-      confidence: 'Alta',
-      reason: 'Baseado nas suas últimas sessões e preferência por ondas grandes.',
-      time: 'Melhor horário: 6h - 9h',
-    },
-    {
-      location: 'Ipanema',
-      confidence: 'Média',
-      reason: 'Você surfou aqui recentemente e teve boa avaliação.',
-      time: 'Melhor horário: 7h - 10h',
-    },
-  ];
+  // Recomendações baseadas no histórico real
+  const recommendations = React.useMemo(() => {
+    if (!surfSessions.length) {
+      return [
+        {
+          location: 'Comece seu histórico',
+          confidence: 'Média',
+          reason: 'Adicione sua primeira sessão para receber recomendações personalizadas!',
+          time: 'Registre suas experiências',
+        }
+      ];
+    }
 
-  if (authLoading || sessionsLoading) {
+    const recs = [];
+    
+    // 1. Local favorito (mais frequentado)
+    const locationCounts = surfSessions.reduce((acc, session) => {
+      acc[session.location] = (acc[session.location] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const favoriteLocation = Object.entries(locationCounts)
+      .sort(([,a], [,b]) => Number(b) - Number(a))[0];
+    
+    if (favoriteLocation && Number(favoriteLocation[1]) > 1) {
+      const sessions = surfSessions.filter(s => s.location === favoriteLocation[0]);
+      const avgRating = sessions.reduce((acc, s) => acc + s.rating, 0) / sessions.length;
+      const lastSession = sessions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+      
+      recs.push({
+        location: favoriteLocation[0],
+        confidence: 'Alta',
+        reason: `Seu local favorito! ${favoriteLocation[1]} sessões com média ${avgRating.toFixed(1)} estrelas. Última vez: ondas de ${lastSession.waves}.`,
+        time: `Melhor experiência: ${lastSession.duration}`,
+      });
+    }
+
+    // 2. Local com melhor avaliação (se diferente do favorito)
+    const locationRatings = surfSessions.reduce((acc, session) => {
+      if (!acc[session.location]) {
+        acc[session.location] = { total: 0, count: 0, sessions: [] };
+      }
+      acc[session.location].total += session.rating;
+      acc[session.location].count += 1;
+      acc[session.location].sessions.push(session);
+      return acc;
+    }, {} as Record<string, { total: number; count: number; sessions: any[] }>);
+
+    const bestRatedLocation = Object.entries(locationRatings)
+      .map(([location, data]: [string, { total: number; count: number; sessions: any[] }]) => ({
+        location,
+        avgRating: data.total / data.count,
+        count: data.count,
+        sessions: data.sessions
+      }))
+      .filter(item => item.count >= 1 && item.location !== favoriteLocation?.[0])
+      .sort((a, b) => b.avgRating - a.avgRating)[0];
+
+    if (bestRatedLocation) {
+      const bestSession = bestRatedLocation.sessions
+        .sort((a, b) => b.rating - a.rating)[0];
+      
+      recs.push({
+        location: bestRatedLocation.location,
+        confidence: 'Alta',
+        reason: `Sua melhor avaliação: ${bestRatedLocation.avgRating.toFixed(1)} estrelas! Melhor sessão teve ${bestSession.rating} estrelas com ondas de ${bestSession.waves}.`,
+        time: `Duração da melhor: ${bestSession.duration}`,
+      });
+    }
+
+    // 3. Baseado na última sessão bem avaliada (4+ estrelas)
+    const recentGoodSessions = surfSessions
+      .filter(s => s.rating >= 4)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    if (recentGoodSessions.length > 0) {
+      const lastGoodSession = recentGoodSessions[0];
+      if (!recs.some(r => r.location === lastGoodSession.location)) {
+        const daysSince = Math.floor((Date.now() - new Date(lastGoodSession.date).getTime()) / (1000 * 60 * 60 * 24));
+        
+        recs.push({
+          location: lastGoodSession.location,
+          confidence: daysSince <= 14 ? 'Alta' : 'Média',
+          reason: `Última boa sessão há ${daysSince} dias! Você deu ${lastGoodSession.rating} estrelas para ondas de ${lastGoodSession.waves}.`,
+          time: `Experiência: ${lastGoodSession.duration}`,
+        });
+      }
+    }
+
+    // 4. Se ainda não tem 3 recomendações, usar qualquer local visitado
+    if (recs.length < 3) {
+      const otherLocations = Object.keys(locationCounts)
+        .filter(location => !recs.some(r => r.location === location))
+        .map(location => {
+          const sessions = surfSessions.filter(s => s.location === location);
+          const avgRating = sessions.reduce((acc, s) => acc + s.rating, 0) / sessions.length;
+          const lastSession = sessions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+          return { location, avgRating, lastSession, count: sessions.length };
+        })
+        .sort((a, b) => b.avgRating - a.avgRating);
+
+      otherLocations.slice(0, 3 - recs.length).forEach(item => {
+        const daysSince = Math.floor((Date.now() - new Date(item.lastSession.date).getTime()) / (1000 * 60 * 60 * 24));
+        recs.push({
+          location: item.location,
+          confidence: 'Média',
+          reason: `${item.count} ${item.count === 1 ? 'sessão' : 'sessões'} com média ${item.avgRating.toFixed(1)} estrelas. Vale revisitar!`,
+          time: `Última vez há ${daysSince} dias`,
+        });
+      });
+    }
+
+    return recs.slice(0, 3); // Máximo 3 recomendações
+  }, [surfSessions]);
+
+  // MUDAR ESTA CONDIÇÃO - só esperar o auth, não as sessões
+  if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   }
 
   if (!user) {
+    const [isLoginOpen, setIsLoginOpen] = useState(false);
+
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -199,7 +331,7 @@ const Profile = () => {
             <p className="text-lg text-gray-600 mb-8">
               Você precisa estar logado para acessar seu perfil.
             </p>
-            <Button className="bg-ocean-gradient text-white">
+            <Button className="bg-ocean-gradient text-white" onClick={() => setIsLoginOpen(true)}>
               Fazer Login
             </Button>
           </div>
@@ -208,6 +340,7 @@ const Profile = () => {
     );
   }
 
+  // Renderizar profile normalmente, mesmo se sessões estão carregando
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
