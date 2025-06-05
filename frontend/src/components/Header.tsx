@@ -31,9 +31,6 @@ const Header = () => {
   const navigate = useNavigate();
   const { user, logout, loading } = useAuth();
 
-  // Aguarda carregamento do AuthContext antes de renderizar
-  if (loading) return null;
-
   const handleLogout = () => {
     logout();
     navigate('/');

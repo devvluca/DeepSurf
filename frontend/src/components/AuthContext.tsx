@@ -34,24 +34,45 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Busca sessão ao carregar a aplicação
+  // Busca perfil do usuário autenticado
+  const fetchProfile = async (userId: string, email: string, user_metadata?: any) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    if (data) {
+      setUser({ ...data, email });
+    } else {
+      // Se não existir, cria um perfil básico com nome do Google se houver
+      const name = user_metadata?.name || user_metadata?.full_name || '';
+      const { error: insertError } = await supabase.from('profiles').insert([{ id: userId, name, email }]);
+      if (insertError) {
+        console.error('Erro ao criar perfil:', insertError);
+        setLoading(false);
+        return;
+      }
+      setUser({ id: userId, name, email });
+    }
+  };
+
   useEffect(() => {
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
       if (session?.user) {
-        setUser(session.user);
+        await fetchProfile(session.user.id, session.user.email || '', session.user.user_metadata);
       }
       setLoading(false);
     };
     getSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        setUser(session.user);
+        await fetchProfile(session.user.id, session.user.email || '', session.user.user_metadata);
       } else {
         setUser(null);
       }
@@ -65,23 +86,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    // O listener vai buscar o perfil
   };
 
   const signup = async (name: string, email: string, password: string) => {
-    const { error, data } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } },
     });
     if (error) throw error;
-    // O listener vai buscar/criar o perfil
   };
 
   const loginWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
     if (error) throw error;
-    // O listener vai buscar/criar o perfil após o redirect
   };
 
   const logout = async () => {

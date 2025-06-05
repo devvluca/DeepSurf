@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { User, Settings, History, TrendingUp, Waves, MapPin, Star, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '@/components/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 
 const Profile = () => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, loading: authLoading } = useAuth();
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -23,8 +24,21 @@ const Profile = () => {
     preferences: user?.preferences || ''
   });
 
+  // Sessões de surf do Supabase
+  const [surfSessions, setSurfSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
+  const [newSession, setNewSession] = useState({
+    date: '',
+    location: '',
+    duration: '',
+    waves: '',
+    rating: 3,
+    notes: ''
+  });
+
   // Atualiza formData quando user mudar
-  React.useEffect(() => {
+  useEffect(() => {
     setFormData({
       name: user?.name || '',
       email: user?.email || '',
@@ -33,6 +47,22 @@ const Profile = () => {
       level: user?.level || '',
       preferences: user?.preferences || ''
     });
+  }, [user]);
+
+  // Busca sessões do usuário
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!user) return;
+      setSessionsLoading(true);
+      const { data, error } = await supabase
+        .from('surf_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+      if (!error && data) setSurfSessions(data);
+      setSessionsLoading(false);
+    };
+    if (user) fetchSessions();
   }, [user]);
 
   const handleSave = async () => {
@@ -46,99 +76,29 @@ const Profile = () => {
     setEditMode(false);
   };
 
-  // Sessões de surf agora são editáveis localmente
-  const [surfSessions, setSurfSessions] = useState([
-    {
-      id: 1,
-      date: '2024-01-20',
-      location: 'Praia do Futuro',
-      duration: '2h 30min',
-      waves: '2.1m',
-      rating: 5,
-      notes: 'Sessão incrível! Ondas perfeitas pela manhã.'
-    },
-    {
-      id: 2,
-      date: '2024-01-18',
-      location: 'Praia de Iracema',
-      duration: '1h 45min',
-      waves: '1.5m',
-      rating: 3,
-      notes: 'Ondas pequenas, mas bom para treinar.'
-    },
-    {
-      id: 3,
-      date: '2024-01-15',
-      location: 'Praia da Joaquina',
-      duration: '3h 15min',
-      waves: '2.5m',
-      rating: 5,
-      notes: 'Épico! Melhores ondas do mês.'
-    }
-  ]);
-  const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
-  const [newSession, setNewSession] = useState({
-    date: '',
-    location: '',
-    duration: '',
-    waves: '',
-    rating: 3,
-    notes: ''
-  });
-
-  const progressData = [
-    { month: 'Set', sessions: 12, avgRating: 3.5 },
-    { month: 'Out', sessions: 15, avgRating: 3.8 },
-    { month: 'Nov', sessions: 18, avgRating: 4.1 },
-    { month: 'Dez', sessions: 20, avgRating: 4.3 },
-    { month: 'Jan', sessions: 22, avgRating: 4.5 }
-  ];
-
-  const recommendations = [
-    {
-      location: 'Praia do Rosa',
-      reason: 'Ondas de 2.2m previstas, perfeitas para seu nível',
-      time: 'Amanhã às 06:00',
-      confidence: 'Alta'
-    },
-    {
-      location: 'Praia da Silveira',
-      reason: 'Condições similares às suas melhores sessões',
-      time: 'Domingo às 07:30',
-      confidence: 'Média'
-    },
-    {
-      location: 'Praia do Futuro',
-      reason: 'Vento offshore previsto, ideal para longboard',
-      time: 'Segunda às 06:30',
-      confidence: 'Alta'
-    }
-  ];
-
-  // REMOVIDO: Duplicata de handleSave
-
   // Adicionar nova sessão
-  const handleAddSession = () => {
+  const handleAddSession = async () => {
+    if (!user) return;
     if (!newSession.date || !newSession.location || !newSession.duration || !newSession.waves) return;
-    setSurfSessions([
-      {
-        ...newSession,
-        id: Date.now(),
-      },
-      ...surfSessions
-    ]);
-    setNewSession({
-      date: '',
-      location: '',
-      duration: '',
-      waves: '',
-      rating: 3,
-      notes: ''
-    });
+    const { data, error } = await supabase.from('surf_sessions').insert([
+      { ...newSession, user_id: user.id }
+    ]).select();
+    if (!error && data) {
+      setSurfSessions([data[0], ...surfSessions]);
+      setNewSession({
+        date: '',
+        location: '',
+        duration: '',
+        waves: '',
+        rating: 3,
+        notes: ''
+      });
+    }
   };
 
   // Excluir sessão
-  const handleDeleteSession = (id: number) => {
+  const handleDeleteSession = async (id: number) => {
+    await supabase.from('surf_sessions').delete().eq('id', id);
     setSurfSessions(surfSessions.filter(s => s.id !== id));
   };
 
@@ -148,10 +108,105 @@ const Profile = () => {
   };
 
   // Salvar edição de sessão
-  const handleSaveSession = (id: number, updated: typeof newSession) => {
-    setSurfSessions(surfSessions.map(s => s.id === id ? { ...s, ...updated } : s));
-    setEditingSessionId(null);
+  const handleSaveSession = async (id: number, updated: typeof newSession) => {
+    const { error } = await supabase.from('surf_sessions').update(updated).eq('id', id);
+    if (!error) {
+      setSurfSessions(surfSessions.map(s => s.id === id ? { ...s, ...updated } : s));
+      setEditingSessionId(null);
+    }
   };
+
+  // Estatísticas reais
+  const stats = React.useMemo(() => {
+    if (!surfSessions.length) {
+      return {
+        total: 0,
+        avgRating: 0,
+        totalHours: 0,
+        beaches: 0,
+      };
+    }
+    const total = surfSessions.length;
+    const avgRating = (
+      surfSessions.reduce((acc, s) => acc + (s.rating || 0), 0) / total
+    ).toFixed(1);
+    // Soma horas a partir do campo duration (espera formato "2h 30min")
+    let totalMinutes = 0;
+    surfSessions.forEach(s => {
+      const match = s.duration.match(/(\d+)h\s*(\d+)?/);
+      if (match) {
+        totalMinutes += parseInt(match[1]) * 60 + (parseInt(match[2]) || 0);
+      }
+    });
+    const totalHours = Math.round(totalMinutes / 60);
+    const beaches = new Set(surfSessions.map(s => s.location)).size;
+    return { total, avgRating, totalHours, beaches };
+  }, [surfSessions]);
+
+  // Progresso dos últimos meses para o gráfico
+  const progressData = React.useMemo(() => {
+    // Agrupa sessões por mês (YYYY-MM)
+    const monthsMap: { [key: string]: { sessions: number; totalRating: number } } = {};
+    surfSessions.forEach((s) => {
+      const date = new Date(s.date);
+      const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthsMap[month]) {
+        monthsMap[month] = { sessions: 0, totalRating: 0 };
+      }
+      monthsMap[month].sessions += 1;
+      monthsMap[month].totalRating += s.rating || 0;
+    });
+    // Ordena meses e prepara dados
+    const months = Object.keys(monthsMap).sort();
+    return months.map((month) => ({
+      month,
+      sessions: monthsMap[month].sessions,
+      avgRating: monthsMap[month].sessions
+        ? Number((monthsMap[month].totalRating / monthsMap[month].sessions).toFixed(2))
+        : 0,
+    }));
+  }, [surfSessions]);
+
+  // Placeholder recommendations - replace with your own logic or API call
+  const recommendations = [
+    {
+      location: 'Praia do Futuro',
+      confidence: 'Alta',
+      reason: 'Baseado nas suas últimas sessões e preferência por ondas grandes.',
+      time: 'Melhor horário: 6h - 9h',
+    },
+    {
+      location: 'Ipanema',
+      confidence: 'Média',
+      reason: 'Você surfou aqui recentemente e teve boa avaliação.',
+      time: 'Melhor horário: 7h - 10h',
+    },
+  ];
+
+  if (authLoading || sessionsLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Acesso Negado
+            </h1>
+            <p className="text-lg text-gray-600 mb-8">
+              Você precisa estar logado para acessar seu perfil.
+            </p>
+            <Button className="bg-ocean-gradient text-white">
+              Fazer Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -311,19 +366,19 @@ const Profile = () => {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-center">
                   <div>
-                    <p className="text-2xl font-bold text-ocean-600">47</p>
+                    <p className="text-2xl font-bold text-ocean-600">{stats.total}</p>
                     <p className="text-sm text-gray-600">Sessões</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-ocean-600">4.2</p>
+                    <p className="text-2xl font-bold text-ocean-600">{stats.avgRating}</p>
                     <p className="text-sm text-gray-600">Média ★</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-ocean-600">85h</p>
+                    <p className="text-2xl font-bold text-ocean-600">{stats.totalHours}h</p>
                     <p className="text-sm text-gray-600">Total</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-ocean-600">12</p>
+                    <p className="text-2xl font-bold text-ocean-600">{stats.beaches}</p>
                     <p className="text-sm text-gray-600">Praias</p>
                   </div>
                 </div>
