@@ -8,12 +8,31 @@ import { User, LogOut, Waves, Menu, Chrome } from 'lucide-react';
 import LoginModal from '@/components/LoginModal';
 import { useAuth } from './AuthContext';
 
+const getFormattedFirstName = (user: any) => {
+  // Tenta pegar do perfil
+  let fullName = user?.name;
+  // Fallback: tenta pegar do user_metadata (Google, etc)
+  if ((!fullName || fullName.trim() === '') && user && user.user_metadata) {
+    fullName = user.user_metadata.name || user.user_metadata.full_name || '';
+  }
+  // Fallback: usa email antes do @
+  if ((!fullName || fullName.trim() === '') && user?.email) {
+    fullName = user.email.split('@')[0];
+  }
+  if (!fullName) return 'Usuário';
+  const firstName = fullName.trim().split(' ')[0];
+  return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+};
+
 const Header = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
+
+  // Aguarda carregamento do AuthContext antes de renderizar
+  if (loading) return null;
 
   const handleLogout = () => {
     logout();
@@ -77,12 +96,7 @@ const Header = () => {
                 <div className="flex items-center space-x-2">
                   <User className="h-5 w-5 text-ocean-600" />
                   <span className="text-gray-700">
-                    {user?.name
-                      ? (() => {
-                          const first = user.name.split(' ')[0];
-                          return `Aloha, ${first.charAt(0).toUpperCase()}${first.slice(1).toLowerCase()}!`;
-                        })()
-                      : 'Aloha!'}
+                    {`Aloha, ${getFormattedFirstName(user)}!`}
                   </span>
                 </div>
                 <Button

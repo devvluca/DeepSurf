@@ -34,39 +34,24 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<Profile | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Busca perfil do usuário autenticado
-  const fetchProfile = async (userId: string, email: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    if (data) {
-      setUser({ ...data, email });
-    } else {
-      // Se não existir, cria um perfil básico
-      await supabase.from('profiles').insert([{ id: userId, name: '', email }]);
-      setUser({ id: userId, name: '', email });
-    }
-  };
-
+  // Busca sessão ao carregar a aplicação
   useEffect(() => {
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
       const session = data.session;
       if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email || '');
+        setUser(session.user);
       }
       setLoading(false);
     };
     getSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email || '');
+        setUser(session.user);
       } else {
         setUser(null);
       }
