@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Chrome } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from './AuthContext';
 
 interface LoginModalProps {
   open: boolean;
@@ -17,24 +17,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, setOpen }) => {
   const [name, setName] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const { login, signup, loginWithGoogle } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        await login(email, password);
       } else {
-        const { error } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
-        if (error) throw error;
+        await signup(name, email, password);
       }
       setOpen(false);
       setEmail('');
       setPassword('');
       setName('');
-    } catch (error) {
-      alert('Erro: ' + (error as any).message);
+    } catch (error: any) {
+      alert('Erro: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -43,11 +42,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ open, setOpen }) => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-      if (error) throw error;
+      await loginWithGoogle();
       setOpen(false);
-    } catch (error) {
-      alert('Erro ao logar com Google: ' + (error as any).message);
+    } catch (error: any) {
+      alert('Erro ao logar com Google: ' + error.message);
     } finally {
       setIsLoading(false);
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Header from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,20 +7,44 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContext';
 import { User, Settings, History, TrendingUp, Waves, MapPin, Star, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAuth } from '@/components/AuthContext';
 
 const Profile = () => {
-  const { user, loading } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.user_metadata?.name || '',
-    boardType: '',
-    weight: 0,
-    level: '',
-    preferences: ''
+    name: user?.name || '',
+    email: user?.email || '',
+    boardType: user?.board_type || '',
+    weight: user?.weight || 0,
+    level: user?.level || '',
+    preferences: user?.preferences || ''
   });
+
+  // Atualiza formData quando user mudar
+  React.useEffect(() => {
+    setFormData({
+      name: user?.name || '',
+      email: user?.email || '',
+      boardType: user?.board_type || '',
+      weight: user?.weight || 0,
+      level: user?.level || '',
+      preferences: user?.preferences || ''
+    });
+  }, [user]);
+
+  const handleSave = async () => {
+    await updateProfile({
+      name: formData.name,
+      board_type: formData.boardType,
+      weight: formData.weight,
+      level: formData.level,
+      preferences: formData.preferences,
+    });
+    setEditMode(false);
+  };
 
   // Sessões de surf agora são editáveis localmente
   const [surfSessions, setSurfSessions] = useState([
@@ -91,46 +115,7 @@ const Profile = () => {
     }
   ];
 
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.user_metadata?.name || '',
-        boardType: '',
-        weight: 0,
-        level: '',
-        preferences: ''
-      });
-    }
-  }, [user]);
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Acesso Negado
-            </h1>
-            <p className="text-lg text-gray-600 mb-8">
-              Você precisa estar logado para acessar seu perfil.
-            </p>
-            <Button className="bg-ocean-gradient text-white">
-              Fazer Login
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleSave = () => {
-    setEditMode(false);
-  };
+  // REMOVIDO: Duplicata de handleSave
 
   // Adicionar nova sessão
   const handleAddSession = () => {
@@ -213,6 +198,14 @@ const Profile = () => {
                       />
                     </div>
                     <div>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      />
+                    </div>
+                    <div>
                       <Label htmlFor="boardType">Tipo de Prancha</Label>
                       <Select value={formData.boardType} onValueChange={(value) => setFormData({...formData, boardType: value})}>
                         <SelectTrigger>
@@ -272,32 +265,34 @@ const Profile = () => {
                   <>
                     <div>
                       <p className="text-sm text-gray-500">Nome</p>
-                      <p className="font-medium">{user?.user_metadata?.name}</p>
+                      <p className="font-medium">{formData.name || 'Não informado'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{user?.email}</p>
+                      <p className="font-medium">{formData.email || 'Não informado'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Tipo de Prancha</p>
-                      <p className="font-medium">{user?.boardType || 'Não informado'}</p>
+                      <p className="font-medium">{formData.boardType || 'Não informado'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Peso</p>
-                      <p className="font-medium">{user?.weight ? `${user.weight} kg` : 'Não informado'}</p>
+                      <p className="font-medium">{formData.weight ? `${formData.weight} kg` : 'Não informado'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Nível</p>
-                      <Badge variant="secondary">{user?.level || 'Não informado'}</Badge>
+                      <Badge variant="secondary">{formData.level || 'Não informado'}</Badge>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Preferências</p>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {user?.preferences?.map((pref, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {pref}
-                          </Badge>
-                        )) || <p className="text-gray-400">Nenhuma preferência definida</p>}
+                        {formData.preferences
+                          ? formData.preferences.split(',').map((pref, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {pref.trim()}
+                              </Badge>
+                            ))
+                          : <p className="text-gray-400">Nenhuma preferência definida</p>}
                       </div>
                     </div>
                   </>

@@ -3,20 +3,20 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { User, LogOut, Waves, Menu, Chrome } from 'lucide-react';
 import LoginModal from '@/components/LoginModal';
+import { useAuth } from './AuthContext';
 
 const Header = () => {
-  const { user, signOut } = useAuth();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    signOut();
+    logout();
     navigate('/');
   };
 
@@ -77,13 +77,12 @@ const Header = () => {
                 <div className="flex items-center space-x-2">
                   <User className="h-5 w-5 text-ocean-600" />
                   <span className="text-gray-700">
-                    Olá,{' '}
-                    {user.user_metadata?.name
+                    {user?.name
                       ? (() => {
-                          const first = user.user_metadata.name.split(' ')[0];
-                          return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+                          const first = user.name.split(' ')[0];
+                          return `Aloha, ${first.charAt(0).toUpperCase()}${first.slice(1).toLowerCase()}!`;
                         })()
-                      : user.email}
+                      : 'Aloha!'}
                   </span>
                 </div>
                 <Button
@@ -154,78 +153,76 @@ const Header = () => {
               >
                 Sobre
               </button>
-              {!user && (
-                <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full bg-ocean-gradient text-white">
+              <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full bg-ocean-gradient text-white">
+                    Entrar
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="text-center text-2xl font-bold text-gray-900">
+                      Entre na DeepSurf
+                    </DialogTitle>
+                  </DialogHeader>
+                  
+                  {/* Google Login Button */}
+                  <Button
+                    variant="outline"
+                    className="w-full mb-4"
+                  >
+                    <Chrome className="h-4 w-4 mr-2" />
+                    Entrar com Google
+                  </Button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Ou
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <form className="space-y-4 mt-4">
+                    <div>
+                      <Label htmlFor="email-mobile">Email</Label>
+                      <Input
+                        id="email-mobile"
+                        type="email"
+                        placeholder="seu@email.com"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="password-mobile">Senha</Label>
+                      <Input
+                        id="password-mobile"
+                        type="password"
+                        placeholder="••••••••"
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-ocean-gradient text-white"
+                    >
                       Entrar
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="text-center text-2xl font-bold text-gray-900">
-                        Entre na DeepSurf
-                      </DialogTitle>
-                    </DialogHeader>
-                    
-                    {/* Google Login Button */}
-                    <Button
-                      variant="outline"
-                      className="w-full mb-4"
+                  </form>
+                  
+                  <div className="text-center mt-4">
+                    <button
+                      onClick={() => { setIsLoginOpen(false); }}
+                      className="text-sm text-ocean-600 hover:underline"
                     >
-                      <Chrome className="h-4 w-4 mr-2" />
-                      Entrar com Google
-                    </Button>
-                    
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                          Ou
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <form className="space-y-4 mt-4">
-                      <div>
-                        <Label htmlFor="email-mobile">Email</Label>
-                        <Input
-                          id="email-mobile"
-                          type="email"
-                          placeholder="seu@email.com"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="password-mobile">Senha</Label>
-                        <Input
-                          id="password-mobile"
-                          type="password"
-                          placeholder="••••••••"
-                          className="mt-1"
-                        />
-                      </div>
-                      <Button
-                        type="submit"
-                        className="w-full bg-ocean-gradient text-white"
-                      >
-                        Entrar
-                      </Button>
-                    </form>
-                    
-                    <div className="text-center mt-4">
-                      <button
-                        onClick={() => { setIsLoginOpen(false); }}
-                        className="text-sm text-ocean-600 hover:underline"
-                      >
-                        Já tem conta? Entre
-                      </button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
+                      Já tem conta? Entre
+                    </button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         )}
