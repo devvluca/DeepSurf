@@ -140,7 +140,7 @@ const Header = () => {
                           <User className="h-4 w-4 mr-2" />
                           Minha Conta
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                        <DropdownMenuItem onClick={() => navigate('/profile')} className="hover:bg-ocean-50 hover:text-ocean-700">
                           <Waves className="h-4 w-4 mr-2" />
                           Perfil de Surf
                         </DropdownMenuItem>
@@ -398,7 +398,7 @@ const Header = () => {
                           <User className="h-4 w-4 mr-2" />
                           Minha Conta
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                        <DropdownMenuItem onClick={() => navigate('/profile')} className="hover:bg-ocean-50 hover:text-ocean-700">
                           <Waves className="h-4 w-4 mr-2" />
                           Perfil de Surf
                         </DropdownMenuItem>

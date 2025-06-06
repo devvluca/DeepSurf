@@ -246,16 +246,16 @@ const Map = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-16">
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-gray-800 to-slate-700 pt-16">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            Mapa de Surfabilidade
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            Mapa de Ondas
           </h1>
-          <p className="text-lg text-gray-600">
-            Visualize as condições de surf em tempo real nas principais praias do Brasil
+          <p className="text-lg text-slate-200">
+            Visualize condições de surf em tempo real nas melhores praias
           </p>
         </div>
 

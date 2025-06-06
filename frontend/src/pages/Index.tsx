@@ -416,13 +416,13 @@ const Index = () => {
       </section>
 
      {/* Current Conditions */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12" data-aos="fade-up">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Condições Atuais - {beach?.name}
             </h2>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-ocean-100">
               Dados em tempo real das melhores praias do Brasil
             </p>
           </div>
@@ -431,50 +431,56 @@ const Index = () => {
             {beach?.conditions.surfConditions.map((condition, index) => (
               <Card
                 key={index}
-                className="text-center bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200"
+                className="text-center bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-all duration-500 hover:bg-ocean-700/50 hover:scale-105"
                 data-aos="fade-up"
                 data-aos-delay={index * 100}
               >
                 <CardContent className="pt-6">
-                  <condition.icon className={`h-8 w-8 mx-auto mb-2 ${condition.color}`} />
-                  <p className="text-2xl font-bold text-gray-900">{condition.value}</p>
-                  <p className="text-sm text-gray-600">{condition.name}</p>
+                  <condition.icon className="h-8 w-8 mx-auto mb-2 text-ocean-200" />
+                  <p className="text-2xl font-bold text-white">{condition.value}</p>
+                  <p className="text-sm text-ocean-100">{condition.name}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            <Card className="transition-transform duration-200 hover:scale-105" data-aos="fade-up" data-aos-delay="200">
+            <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-transform duration-200 hover:scale-105" data-aos="fade-up" data-aos-delay="200">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2 text-ocean-600" />
+                <CardTitle className="flex items-center text-white">
+                  <TrendingUp className="h-5 w-5 mr-2 text-ocean-200" />
                   Previsão do Swell - Hoje
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-ocean-100">
                   Altura das ondas ao longo do dia
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={340}>
                   <AreaChart data={beach?.conditions.swellData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis domain={[0, 4]} /> {/* Aumenta o eixo Y para até 4m */}
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(186,230,253,0.2)" />
+                    <XAxis dataKey="time" tick={{ fill: '#bae6fd' }} />
+                    <YAxis domain={[0, 4]} tick={{ fill: '#bae6fd' }} />
                     <Tooltip 
                       formatter={(value) => [`${value}m`, 'Altura']}
                       labelFormatter={(label) => `Horário: ${label}`}
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(12,74,110,0.9)', 
+                        border: '1px solid rgba(186,230,253,0.3)', 
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
                     />
                     <Area 
                       type="monotone" 
                       dataKey="height" 
-                      stroke="#0284c7" 
-                      fill="url(#oceanGradient)" 
+                      stroke="#bae6fd" 
+                      fill="url(#oceanBalancedGradient)" 
                     />
                     <defs>
-                      <linearGradient id="oceanGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#0284c7" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#0284c7" stopOpacity={0.1}/>
+                      <linearGradient id="oceanBalancedGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#bae6fd" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#bae6fd" stopOpacity={0.1}/>
                       </linearGradient>
                     </defs>
                   </AreaChart>
@@ -482,30 +488,36 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            <Card className="transition-transform duration-200 hover:scale-105" data-aos="fade-up" data-aos-delay="400">
+            <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-transform duration-200 hover:scale-105" data-aos="fade-up" data-aos-delay="400">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Star className="h-5 w-5 mr-2 text-yellow-500" />
+                <CardTitle className="flex items-center text-white">
+                  <Star className="h-5 w-5 mr-2 text-yellow-300" />
                   Previsão Semanal
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-ocean-100">
                   Qualidade das ondas (1-5 estrelas)
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={beach?.conditions.weeklyForecast}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(186,230,253,0.2)" />
+                    <XAxis dataKey="day" tick={{ fill: '#bae6fd' }} />
+                    <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} allowDecimals={false} tick={{ fill: '#bae6fd' }} />
                     <Tooltip 
                       formatter={(value, name) => [
                         name === 'height' ? `${value}m` : `${value} estrelas`, 
                         name === 'height' ? 'Altura' : 'Qualidade'
                       ]}
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(12,74,110,0.9)', 
+                        border: '1px solid rgba(186,230,253,0.3)', 
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
                     />
-                    <Bar dataKey="height" fill="#0284c7" />
-                    <Bar dataKey="quality" fill="#eab308" />
+                    <Bar dataKey="height" fill="#bae6fd" />
+                    <Bar dataKey="quality" fill="#fde047" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -515,43 +527,43 @@ const Index = () => {
       </section>
 
       {/* Features + CTA Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-16 bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16" data-aos="fade-up">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Tecnologia Avançada para Surfistas
             </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-lg text-ocean-100 max-w-2xl mx-auto">
               Combinamos dados meteorológicos, inteligência artificial e análise preditiva para oferecer as melhores previsões de surf do mercado.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 mb-16">
-            <Card className="bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200" data-aos="fade-up" data-aos-delay="100">
+            <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-all duration-500 hover:bg-ocean-700/50 hover:scale-105" data-aos="fade-up" data-aos-delay="100">
               <CardHeader>
-                <Waves className="h-12 w-12 text-ocean-600 mb-4" />
-                <CardTitle>Análise de Ondas em Tempo Real</CardTitle>
-                <CardDescription>
+                <Waves className="h-12 w-12 text-ocean-200 mb-4" />
+                <CardTitle className="text-white">Análise de Ondas em Tempo Real</CardTitle>
+                <CardDescription className="text-ocean-100">
                   Dados atualizados a cada hora com precisão de até 95% usando sensores oceânicos e satélites.
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200" data-aos="fade-up" data-aos-delay="200">
+            <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-all duration-500 hover:bg-ocean-700/50 hover:scale-105" data-aos="fade-up" data-aos-delay="200">
               <CardHeader>
-                <MapPin className="h-12 w-12 text-ocean-600 mb-4" />
-                <CardTitle>Mapeamento Inteligente</CardTitle>
-                <CardDescription>
+                <MapPin className="h-12 w-12 text-ocean-200 mb-4" />
+                <CardTitle className="text-white">Mapeamento Inteligente</CardTitle>
+                <CardDescription className="text-ocean-100">
                   Visualize condições de surf em centenas de praias com indicadores de qualidade personalizados.
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200" data-aos="fade-up" data-aos-delay="300">
+            <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-all duration-500 hover:bg-ocean-700/50 hover:scale-105" data-aos="fade-up" data-aos-delay="300">
               <CardHeader>
-                <Users className="h-12 w-12 text-ocean-600 mb-4" />
-                <CardTitle>Recomendações Personalizadas</CardTitle>
-                <CardDescription>
+                <Users className="h-12 w-12 text-ocean-200 mb-4" />
+                <CardTitle className="text-white">Recomendações Personalizadas</CardTitle>
+                <CardDescription className="text-ocean-100">
                   IA que aprende suas preferências e nível de habilidade para sugerir as melhores sessões.
                 </CardDescription>
               </CardHeader>
@@ -560,16 +572,16 @@ const Index = () => {
 
           {/* CTA merged here, no colored background */}
           <div className="max-w-4xl mx-auto text-center" data-aos="fade-up" data-aos-delay="400">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
               Pronto para Surfar as Melhores Ondas?
             </h2>
-            <p className="text-xl text-gray-600 mb-8">
+            <p className="text-xl text-ocean-100 mb-8">
               Junte-se a milhares de surfistas que já usam a DeepSurf para encontrar as condições perfeitas.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                className="bg-white text-ocean-800 hover:bg-blue-50 text-lg px-8 py-4"
+                className="bg-white text-ocean-800 hover:bg-gray-100 text-lg px-8 py-4 font-semibold"
               >
                 Criar Conta Gratuita
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -577,7 +589,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-ocean-800 text-ocean-800 bg-transparent hover:bg-ocean-50 text-lg px-8 py-4"
+                className="border-white text-white bg-transparent hover:bg-white/10 text-lg px-8 py-4 font-semibold"
                 onClick={() => navigate('/map')}
               >
                 Explorar Mapa

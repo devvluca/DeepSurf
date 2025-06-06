@@ -52,10 +52,19 @@ const Account = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-16">
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-gray-800 to-slate-700 pt-16">
       <Header />
-      
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            Minha Conta
+          </h1>
+          <p className="text-lg text-slate-200">
+            Gerencie suas configurações e informações pessoais
+          </p>
+        </div>
+
         {/* Header da conta */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-gradient-to-br from-ocean-600 to-ocean-800 rounded-full flex items-center justify-center mx-auto mb-4">
