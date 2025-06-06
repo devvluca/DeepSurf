@@ -4,8 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { User, LogOut, Waves, Menu, Chrome } from 'lucide-react';
+import { User, LogOut, Waves, Menu, Chrome, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import LoginModal from '@/components/LoginModal';
 import { useAuth } from './AuthContext';
 
@@ -85,13 +86,7 @@ const Header = () => {
                 Mapa de Ondas
               </button>
               <button 
-                onClick={() => {
-                  if (user) {
-                    navigate('/profile');
-                  } else {
-                    setShowLoginPrompt(true);
-                  }
-                }}
+                onClick={() => navigate('/profile')}
                 className="text-gray-700 hover:text-ocean-600 transition-colors"
               >
                 Perfil
@@ -108,21 +103,30 @@ const Header = () => {
             <div className="hidden md:flex items-center space-x-4">
               {user ? (
                 <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-5 w-5 text-ocean-600" />
-                    <span className="text-gray-700">
-                      {`Aloha, ${getFormattedFirstName(user)}!`}
-                    </span>
-                  </div>
-                  <Button
-                    onClick={handleLogout}
-                    variant="outline"
-                    size="sm"
-                    className="border-ocean-200 text-ocean-600 hover:bg-ocean-50"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sair
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center space-x-2 text-gray-700 hover:bg-gray-100 transition-colors">
+                        <User className="h-5 w-5 text-ocean-600" />
+                        <span>{`Aloha, ${getFormattedFirstName(user)}!`}</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => navigate('/account')}>
+                        <User className="h-4 w-4 mr-2" />
+                        Minha Conta
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/profile')}>
+                        <Waves className="h-4 w-4 mr-2" />
+                        Perfil de Surf
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sair
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ) : (
                 <Button
@@ -164,13 +168,8 @@ const Header = () => {
                 </button>
                 <button 
                   onClick={() => {
-                    if (user) {
-                      navigate('/profile');
-                      setMobileMenuOpen(false);
-                    } else {
-                      setShowLoginPrompt(true);
-                      setMobileMenuOpen(false);
-                    }
+                    navigate('/profile');
+                    setMobileMenuOpen(false);
                   }}
                   className="text-left text-gray-700 hover:text-ocean-600 transition-colors"
                 >
@@ -182,9 +181,28 @@ const Header = () => {
                 >
                   Sobre
                 </button>
-                <Button className="w-full bg-ocean-gradient text-white" onClick={() => { setIsLoginOpen(true); setMobileMenuOpen(false); }}>
-                  Entrar
-                </Button>
+                {user ? (
+                  <div className="space-y-3 pt-2 border-t border-gray-200">
+                    <div className="flex items-center space-x-2 px-2">
+                      <User className="h-5 w-5 text-ocean-600" />
+                      <span className="text-gray-700">
+                        {`Aloha, ${getFormattedFirstName(user)}!`}
+                      </span>
+                    </div>
+                    <Button 
+                      onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                      variant="outline"
+                      className="w-full border-ocean-200 text-ocean-600 hover:bg-ocean-50"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sair
+                    </Button>
+                  </div>
+                ) : (
+                  <Button className="w-full bg-ocean-gradient text-white" onClick={() => { setIsLoginOpen(true); setMobileMenuOpen(false); }}>
+                    Entrar
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -227,10 +245,10 @@ const Header = () => {
   return (
     <nav className="fixed z-50 w-full px-0 transition-transform duration-300 ease-in-out">
       <motion.div
-        className={`mx-auto group
+        className={`mx-auto
           ${isScrolled
-            ? "mt-2 rounded-2xl border border-gray-700/30 bg-gray-800/60 shadow-lg backdrop-blur-xl hover:bg-white/80 hover:border-gray-200/40"
-            : "bg-gray-800/50 backdrop-blur-md shadow-sm hover:bg-white/75"
+            ? "mt-2 rounded-2xl border border-gray-700/30 bg-gray-800/60 shadow-lg backdrop-blur-xl"
+            : "bg-gray-800/50 backdrop-blur-md shadow-sm"
           }`}
         initial={false}
         animate={
@@ -256,7 +274,7 @@ const Header = () => {
         }}
         style={{ overflow: 'visible' }}
       >
-        <header className="border-b border-gray-600/20 group-hover:border-gray-200/20 transition-colors duration-1000">
+        <header className="border-b border-gray-600/20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               {/* Logo */}
@@ -266,7 +284,7 @@ const Header = () => {
                   alt="DeepSurf Logo" 
                   className="h-10 w-10"
                 />
-                <span className="text-2xl font-bold bg-ocean-gradient bg-clip-text text-transparent group-hover:text-gray-800 transition-colors duration-1000">
+                <span className="text-2xl font-bold bg-ocean-gradient bg-clip-text text-transparent">
                   DeepSurf
                 </span>
               </div>
@@ -275,31 +293,25 @@ const Header = () => {
               <nav className="hidden md:flex items-center space-x-8">
                 <button 
                   onClick={() => navigate('/')}
-                  className="text-white group-hover:text-gray-800 hover:text-ocean-300 group-hover:hover:text-ocean-700 transition-colors duration-1000"
+                  className="text-white hover:text-ocean-300 transition-colors"
                 >
                   Home
                 </button>
                 <button 
                   onClick={() => navigate('/map')}
-                  className="text-white group-hover:text-gray-800 hover:text-ocean-300 group-hover:hover:text-ocean-700 transition-colors duration-1000"
+                  className="text-white hover:text-ocean-300 transition-colors"
                 >
                   Mapa de Ondas
                 </button>
                 <button 
-                  onClick={() => {
-                    if (user) {
-                      navigate('/profile');
-                    } else {
-                      setShowLoginPrompt(true);
-                    }
-                  }}
-                  className="text-white group-hover:text-gray-800 hover:text-ocean-300 group-hover:hover:text-ocean-700 transition-colors duration-1000"
+                  onClick={() => navigate('/profile')}
+                  className="text-white hover:text-ocean-300 transition-colors"
                 >
                   Perfil
                 </button>
                 <button 
                   onClick={() => navigate('/about')}
-                  className="text-white group-hover:text-gray-800 hover:text-ocean-300 group-hover:hover:text-ocean-700 transition-colors duration-1000"
+                  className="text-white hover:text-ocean-300 transition-colors"
                 >
                   Sobre
                 </button>
@@ -309,25 +321,34 @@ const Header = () => {
               <div className="hidden md:flex items-center space-x-4">
                 {user ? (
                   <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <User className="h-5 w-5 text-ocean-300 group-hover:text-ocean-700 transition-colors duration-1000" />
-                      <span className="text-white group-hover:text-gray-800 transition-colors duration-1000">
-                        {`Aloha, ${getFormattedFirstName(user)}!`}
-                      </span>
-                    </div>
-                    <Button
-                      onClick={handleLogout}
-                      variant="outline"
-                      size="sm"
-                      className="border-ocean-300 text-white bg-transparent hover:bg-ocean-300/20 group-hover:border-ocean-700 group-hover:text-ocean-700 group-hover:bg-transparent group-hover:hover:bg-ocean-700/20 transition-all duration-1000"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sair
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="flex items-center space-x-2 text-white hover:bg-white/10 transition-colors">
+                          <User className="h-5 w-5 text-ocean-300" />
+                          <span>{`Aloha, ${getFormattedFirstName(user)}!`}</span>
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => navigate('/account')}>
+                          <User className="h-4 w-4 mr-2" />
+                          Minha Conta
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/profile')}>
+                          <Waves className="h-4 w-4 mr-2" />
+                          Perfil de Surf
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sair
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ) : (
                   <Button
-                    className="bg-ocean-300 text-gray-800 hover:bg-ocean-300/80 group-hover:bg-ocean-700 group-hover:text-white group-hover:hover:bg-ocean-700/80 transition-all duration-1000"
+                    className="bg-ocean-300 text-gray-800 hover:bg-ocean-300/80 transition-all"
                     onClick={() => { setIsLoginOpen(true); }}
                   >
                     Entrar
@@ -341,7 +362,7 @@ const Header = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="text-white group-hover:text-gray-800 hover:bg-white/10 group-hover:hover:bg-gray-100/20 transition-all duration-1000"
+                  className="text-white hover:bg-white/10 transition-all"
                 >
                   <Menu className="h-5 w-5" />
                 </Button>
@@ -351,7 +372,7 @@ const Header = () => {
             {/* Mobile Navigation */}
             {mobileMenuOpen && (
               <motion.div 
-                className="md:hidden py-4 border-t border-gray-600/20 group-hover:border-gray-200/20 transition-colors duration-1000"
+                className="md:hidden py-4 border-t border-gray-600/20"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
@@ -360,39 +381,53 @@ const Header = () => {
                 <div className="flex flex-col space-y-4">
                   <button 
                     onClick={() => { navigate('/'); setMobileMenuOpen(false); }}
-                    className="text-left text-white group-hover:text-gray-800 hover:text-ocean-300 group-hover:hover:text-ocean-700 transition-colors duration-1000"
+                    className="text-left text-white hover:text-ocean-300 transition-colors"
                   >
                     Home
                   </button>
                   <button 
                     onClick={() => { navigate('/map'); setMobileMenuOpen(false); }}
-                    className="text-left text-white group-hover:text-gray-800 hover:text-ocean-300 group-hover:hover:text-ocean-700 transition-colors duration-1000"
+                    className="text-left text-white hover:text-ocean-300 transition-colors"
                   >
                     Mapa de Ondas
                   </button>
                   <button 
                     onClick={() => {
-                      if (user) {
-                        navigate('/profile');
-                        setMobileMenuOpen(false);
-                      } else {
-                        setShowLoginPrompt(true);
-                        setMobileMenuOpen(false);
-                      }
+                      navigate('/profile');
+                      setMobileMenuOpen(false);
                     }}
-                    className="text-left text-white group-hover:text-gray-800 hover:text-ocean-300 group-hover:hover:text-ocean-700 transition-colors duration-1000"
+                    className="text-left text-white hover:text-ocean-300 transition-colors"
                   >
                     Perfil
                   </button>
                   <button 
                     onClick={() => { navigate('/about'); setMobileMenuOpen(false); }}
-                    className="text-left text-white group-hover:text-gray-800 hover:text-ocean-300 group-hover:hover:text-ocean-700 transition-colors duration-1000"
+                    className="text-left text-white hover:text-ocean-300 transition-colors"
                   >
                     Sobre
                   </button>
-                  <Button className="w-full bg-ocean-300 text-gray-800 group-hover:bg-ocean-700 group-hover:text-white transition-all duration-1000" onClick={() => { setIsLoginOpen(true); setMobileMenuOpen(false); }}>
-                    Entrar
-                  </Button>
+                  {user ? (
+                    <div className="space-y-3 pt-2 border-t border-gray-600/20">
+                      <div className="flex items-center space-x-2 px-2">
+                        <User className="h-5 w-5 text-ocean-300" />
+                        <span className="text-white">
+                          {`Aloha, ${getFormattedFirstName(user)}!`}
+                        </span>
+                      </div>
+                      <Button 
+                        onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                        variant="outline"
+                        className="w-full border-ocean-300 text-white bg-transparent hover:bg-ocean-300/20"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sair
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button className="w-full bg-ocean-300 text-gray-800" onClick={() => { setIsLoginOpen(true); setMobileMenuOpen(false); }}>
+                      Entrar
+                    </Button>
+                  )}
                 </div>
               </motion.div>
             )}

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { User, Settings, History, TrendingUp, Waves, MapPin, Star, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { User, Settings, History, TrendingUp, Waves, MapPin, Star, Calendar, Pencil, Trash2, Mail, Weight, Award, Heart, UserCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '@/components/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
@@ -452,28 +452,48 @@ const Profile = () => {
                 ) : (
                   <>
                     <div>
-                      <p className="text-sm text-gray-500">Nome</p>
-                      <p className="font-medium">{formData.name || 'Não informado'}</p>
+                      <p className="text-sm text-gray-500 flex items-center">
+                        <UserCircle className="h-4 w-4 mr-2 text-ocean-600" />
+                        Nome
+                      </p>
+                      <p className="font-medium ml-6">{formData.name || 'Não informado'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{formData.email || 'Não informado'}</p>
+                      <p className="text-sm text-gray-500 flex items-center">
+                        <Mail className="h-4 w-4 mr-2 text-ocean-600" />
+                        Email
+                      </p>
+                      <p className="font-medium ml-6">{formData.email || 'Não informado'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Tipo de Prancha</p>
-                      <p className="font-medium">{formData.boardType || 'Não informado'}</p>
+                      <p className="text-sm text-gray-500 flex items-center">
+                        <Waves className="h-4 w-4 mr-2 text-ocean-600" />
+                        Tipo de Prancha
+                      </p>
+                      <p className="font-medium ml-6">{formData.boardType || 'Não informado'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Peso</p>
-                      <p className="font-medium">{formData.weight ? `${formData.weight} kg` : 'Não informado'}</p>
+                      <p className="text-sm text-gray-500 flex items-center">
+                        <Weight className="h-4 w-4 mr-2 text-ocean-600" />
+                        Peso
+                      </p>
+                      <p className="font-medium ml-6">{formData.weight ? `${formData.weight} kg` : 'Não informado'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Nível</p>
-                      <Badge variant="secondary">{formData.level || 'Não informado'}</Badge>
+                      <p className="text-sm text-gray-500 flex items-center">
+                        <Award className="h-4 w-4 mr-2 text-ocean-600" />
+                        Nível
+                      </p>
+                      <div className="ml-6">
+                        <Badge variant="secondary">{formData.level || 'Não informado'}</Badge>
+                      </div>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Preferências</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
+                      <p className="text-sm text-gray-500 flex items-center">
+                        <Heart className="h-4 w-4 mr-2 text-ocean-600" />
+                        Preferências
+                      </p>
+                      <div className="flex flex-wrap gap-1 mt-1 ml-6">
                         {formData.preferences
                           ? formData.preferences.split(',').map((pref, index) => (
                               <Badge key={index} variant="outline" className="text-xs">
