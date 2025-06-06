@@ -151,6 +151,56 @@ function useCountUp(to: number, duration = 1800, suffix = '', isPercent = false)
   return `${value}${suffix}`;
 }
 
+// Componente para efeito de digitação
+const TypewriterEffect = ({ phrases, typingSpeed = 80, deletingSpeed = 50, pauseTime = 1500 }) => {
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [currentText, setCurrentText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showCursor, setShowCursor] = useState(true);
+
+  useEffect(() => {
+    const currentPhrase = phrases[currentPhraseIndex];
+    
+    const timeout = setTimeout(() => {
+      if (!isDeleting) {
+        // Digitando
+        if (currentText.length < currentPhrase.length) {
+          setCurrentText(currentPhrase.slice(0, currentText.length + 1));
+        } else {
+          // Terminou de digitar, pausa e depois começa a apagar
+          setTimeout(() => setIsDeleting(true), pauseTime);
+        }
+      } else {
+        // Apagando
+        if (currentText.length > 0) {
+          setCurrentText(currentText.slice(0, -1));
+        } else {
+          // Terminou de apagar, vai para próxima frase
+          setIsDeleting(false);
+          setCurrentPhraseIndex((prevIndex) => (prevIndex + 1) % phrases.length);
+        }
+      }
+    }, isDeleting ? deletingSpeed : typingSpeed);
+
+    return () => clearTimeout(timeout);
+  }, [currentText, isDeleting, currentPhraseIndex, phrases, typingSpeed, deletingSpeed, pauseTime]);
+
+  // Efeito do cursor piscando (mais rápido)
+  useEffect(() => {
+    const cursorInterval = setInterval(() => {
+      setShowCursor(prev => !prev);
+    }, 400);
+    return () => clearInterval(cursorInterval);
+  }, []);
+
+  return (
+    <span>
+      {currentText}
+      <span className={`${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-75`}>|</span>
+    </span>
+  );
+};
+
 const Index = () => {
   const [selectedBeach, setSelectedBeach] = useState(beaches[0].id);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -203,6 +253,15 @@ const Index = () => {
     setBalloonHovered(open || balloonHovered);
   };
 
+  // Frases para o efeito de digitação
+  const phrases = [
+    "Previsões de Ondas",
+    "Swells Encontrados",
+    "Surfe as Melhores Ondas", 
+    "Condições Perfeitas",
+    "Ondas Ideais para Você"
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -222,9 +281,9 @@ const Index = () => {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
-              <div className="space-y-4">
+              <div className="space-y-4" data-aos="fade-right" data-aos-delay="200">
                 <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight">
-                  Previsões de Ondas
+                  <TypewriterEffect phrases={phrases} />
                   <span className="block text-ocean-200">Baseadas em IA</span>
                 </h1>
                 <p className="text-xl text-ocean-100 max-w-lg">
@@ -233,7 +292,7 @@ const Index = () => {
                 </p>
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4" data-aos="fade-right" data-aos-delay="400">
                 <Button size="lg" className="bg-white text-ocean-900 hover:bg-ocean-50 text-lg px-8 py-4">
                   Começar Agora
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -247,7 +306,7 @@ const Index = () => {
                 </Button>
               </div>
               
-              <div className="flex items-center space-x-8 text-ocean-200">
+              <div className="flex items-center space-x-8 text-ocean-200" data-aos="fade-right" data-aos-delay="600">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-white transition-all duration-700">{count95}</div>
                   <div className="text-sm">Precisão</div>
@@ -272,6 +331,8 @@ const Index = () => {
                 onMouseLeave={() => setBalloonHovered(false)}
                 onFocus={() => setBalloonHovered(true)}
                 onBlur={() => setBalloonHovered(false)}
+                data-aos="zoom-in"
+                data-aos-delay="300"
               >
                 <Card className="bg-white/10 backdrop-blur-sm border-white/20">
                   <CardHeader>
@@ -334,14 +395,14 @@ const Index = () => {
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <Card className="bg-white/10 backdrop-blur-sm border-white/20 transform transition-transform duration-200 hover:scale-105">
+                <Card className="bg-white/10 backdrop-blur-sm border-white/20 transform transition-transform duration-200 hover:scale-105" data-aos="fade-left" data-aos-delay="500">
                   <CardContent className="p-4 text-center">
                     <Bell className="h-8 w-8 text-ocean-300 mx-auto mb-2" />
                     <div className="text-white font-medium">Alerta Ativo</div>
                     <div className="text-ocean-200 text-sm">{beach?.conditions.alert}</div>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/10 backdrop-blur-sm border-white/20 transform transition-transform duration-200 hover:scale-105">
+                <Card className="bg-white/10 backdrop-blur-sm border-white/20 transform transition-transform duration-200 hover:scale-105" data-aos="fade-left" data-aos-delay="600">
                   <CardContent className="p-4 text-center">
                     <TrendingUp className="h-8 w-8 text-ocean-300 mx-auto mb-2" />
                     <div className="text-white font-medium">Tendência</div>
@@ -357,7 +418,7 @@ const Index = () => {
      {/* Current Conditions */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
+          <div className="text-center mb-12" data-aos="fade-up">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Condições Atuais - {beach?.name}
             </h2>
@@ -371,6 +432,8 @@ const Index = () => {
               <Card
                 key={index}
                 className="text-center bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200"
+                data-aos="fade-up"
+                data-aos-delay={index * 100}
               >
                 <CardContent className="pt-6">
                   <condition.icon className={`h-8 w-8 mx-auto mb-2 ${condition.color}`} />
@@ -382,7 +445,7 @@ const Index = () => {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            <Card>
+            <Card className="transition-transform duration-200 hover:scale-105" data-aos="fade-up" data-aos-delay="200">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <TrendingUp className="h-5 w-5 mr-2 text-ocean-600" />
@@ -419,7 +482,7 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="transition-transform duration-200 hover:scale-105" data-aos="fade-up" data-aos-delay="400">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Star className="h-5 w-5 mr-2 text-yellow-500" />
@@ -454,7 +517,7 @@ const Index = () => {
       {/* Features + CTA Section */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16" data-aos="fade-up">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Tecnologia Avançada para Surfistas
             </h2>
@@ -464,7 +527,7 @@ const Index = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 mb-16">
-            <Card className="bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200">
+            <Card className="bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200" data-aos="fade-up" data-aos-delay="100">
               <CardHeader>
                 <Waves className="h-12 w-12 text-ocean-600 mb-4" />
                 <CardTitle>Análise de Ondas em Tempo Real</CardTitle>
@@ -474,7 +537,7 @@ const Index = () => {
               </CardHeader>
             </Card>
 
-            <Card className="bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200">
+            <Card className="bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200" data-aos="fade-up" data-aos-delay="200">
               <CardHeader>
                 <MapPin className="h-12 w-12 text-ocean-600 mb-4" />
                 <CardTitle>Mapeamento Inteligente</CardTitle>
@@ -484,7 +547,7 @@ const Index = () => {
               </CardHeader>
             </Card>
 
-            <Card className="bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200">
+            <Card className="bg-white/80 border border-blue-100 transition-shadow transition-transform duration-500 hover:shadow-md hover:scale-105 shadow-blue-100 hover:shadow-blue-200" data-aos="fade-up" data-aos-delay="300">
               <CardHeader>
                 <Users className="h-12 w-12 text-ocean-600 mb-4" />
                 <CardTitle>Recomendações Personalizadas</CardTitle>
@@ -496,7 +559,7 @@ const Index = () => {
           </div>
 
           {/* CTA merged here, no colored background */}
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto text-center" data-aos="fade-up" data-aos-delay="400">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
               Pronto para Surfar as Melhores Ondas?
             </h2>
