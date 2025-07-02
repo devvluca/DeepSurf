@@ -12,3 +12,15 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+# Sitemap
+Sitemap: https://deepsurf.app/sitemap.xml
+
+# PWA Files
+Allow: /manifest.json
+Allow: /sw.js
+Allow: /img/
+Allow: /
+
+User-agent: *
+Allow: /

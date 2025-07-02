@@ -10,6 +10,7 @@ import About from "./pages/About";
 import Account from "./pages/Account";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/components/AuthContext";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <PWAInstallPrompt />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />

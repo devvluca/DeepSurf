@@ -151,12 +151,11 @@ function useCountUp(to: number, duration = 1800, suffix = '', isPercent = false)
   return `${value}${suffix}`;
 }
 
-// Componente para efeito de digitação
+// Componente para efeito de digitação com animação de onda
 const TypewriterEffect = ({ phrases, typingSpeed = 80, deletingSpeed = 50, pauseTime = 1500 }) => {
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [currentText, setCurrentText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showCursor, setShowCursor] = useState(true);
 
   useEffect(() => {
     const currentPhrase = phrases[currentPhraseIndex];
@@ -185,18 +184,61 @@ const TypewriterEffect = ({ phrases, typingSpeed = 80, deletingSpeed = 50, pause
     return () => clearTimeout(timeout);
   }, [currentText, isDeleting, currentPhraseIndex, phrases, typingSpeed, deletingSpeed, pauseTime]);
 
-  // Efeito do cursor piscando (mais rápido)
-  useEffect(() => {
-    const cursorInterval = setInterval(() => {
-      setShowCursor(prev => !prev);
-    }, 400);
-    return () => clearInterval(cursorInterval);
-  }, []);
-
   return (
-    <span>
+    <span className="relative inline-block">
       {currentText}
-      <span className={`${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-75`}>|</span>
+      {/* Animação de onda fluida */}
+      <span className="inline-block ml-2 relative">
+        <svg 
+          width="35" 
+          height="24" 
+          viewBox="0 0 35 24" 
+          className="inline-block align-middle"
+        >
+          <defs>
+            <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#bae6fd" stopOpacity="0.4" />
+              <stop offset="50%" stopColor="#87ceeb" stopOpacity="1" />
+              <stop offset="100%" stopColor="#bae6fd" stopOpacity="0.4" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M3,12 Q8,6 13,12 T23,12 T33,12"
+            stroke="url(#waveGradient)"
+            strokeWidth="2.5"
+            fill="none"
+            strokeLinecap="round"
+            className={`transition-all duration-500 ${
+              isDeleting ? 'animate-wave-reverse' : 'animate-wave-flow'
+            }`}
+          />
+          {/* Pontos de brilho para dar mais dinamismo */}
+          <circle
+            cx="8"
+            cy="8"
+            r="1.5"
+            fill="#87ceeb"
+            className={`${isDeleting ? 'animate-bounce' : 'animate-pulse'}`}
+            opacity="0.8"
+          />
+          <circle
+            cx="18"
+            cy="16"
+            r="1"
+            fill="#bae6fd"
+            className={`${isDeleting ? 'animate-pulse' : 'animate-bounce'}`}
+            opacity="0.6"
+          />
+          <circle
+            cx="28"
+            cy="8"
+            r="1.2"
+            fill="#87ceeb"
+            className={`${isDeleting ? 'animate-bounce' : 'animate-pulse'}`}
+            opacity="0.7"
+          />
+        </svg>
+      </span>
     </span>
   );
 };
@@ -278,46 +320,51 @@ const Index = () => {
         <div className="absolute inset-0 wave-animation opacity-20"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent"></div>
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="space-y-4" data-aos="fade-right" data-aos-delay="200">
-                <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
+              <div className="space-y-3 sm:space-y-4" data-aos="fade-right" data-aos-delay="200">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
                   <TypewriterEffect phrases={phrases} />
                   <span className="block text-ocean-200">Baseadas em IA</span>
                 </h1>
-                <p className="text-xl text-ocean-100 max-w-lg">
+                <p className="text-lg sm:text-xl text-ocean-100 max-w-lg mx-auto lg:mx-0">
                   Análise avançada de dados climáticos para encontrar as melhores condições de surf. 
                   Tecnologia de ponta para surfistas que buscam a onda perfeita.
                 </p>
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-4" data-aos="fade-right" data-aos-delay="400">
-                <Button size="lg" className="bg-white text-ocean-900 hover:bg-ocean-50 text-lg px-8 py-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start" data-aos="fade-right" data-aos-delay="400">
+                <Button 
+                  size="lg" 
+                  className="bg-white text-ocean-900 hover:bg-ocean-50 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
+                  onClick={() => navigate('/account')}
+                >
                   Começar Agora
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-white text-white bg-transparent hover:bg-white/10 text-lg px-8 py-4"
+                  className="border-white text-white bg-transparent hover:bg-white/10 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
+                  onClick={() => navigate('/map')}
                 >
                   Ver Demonstração
                 </Button>
               </div>
               
-              <div className="flex items-center space-x-8 text-ocean-200" data-aos="fade-right" data-aos-delay="600">
+              <div className="flex items-center justify-center lg:justify-start space-x-4 sm:space-x-8 text-ocean-200" data-aos="fade-right" data-aos-delay="600">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white transition-all duration-700">{count95}</div>
-                  <div className="text-sm">Precisão</div>
+                  <div className="text-xl sm:text-2xl font-bold text-white transition-all duration-700">{count95}</div>
+                  <div className="text-xs sm:text-sm">Precisão</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white transition-all duration-700">{count500}</div>
-                  <div className="text-sm">Praias Monitoradas</div>
+                  <div className="text-xl sm:text-2xl font-bold text-white transition-all duration-700">{count500}</div>
+                  <div className="text-xs sm:text-sm">Praias Monitoradas</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-white transition-all duration-700">{count247}</div>
-                  <div className="text-sm">Alertas em Tempo Real</div>
+                  <div className="text-xl sm:text-2xl font-bold text-white transition-all duration-700">{count247}</div>
+                  <div className="text-xs sm:text-sm">Alertas em Tempo Real</div>
                 </div>
               </div>
             </div>
@@ -416,18 +463,18 @@ const Index = () => {
       </section>
 
      {/* Current Conditions */}
-      <section className="py-16 bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
+      <section className="py-8 sm:py-12 lg:py-16 bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12" data-aos="fade-up">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <div className="text-center mb-8 sm:mb-12" data-aos="fade-up">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 sm:mb-4">
               Condições Atuais - {beach?.name}
             </h2>
-            <p className="text-lg text-ocean-100">
+            <p className="text-base sm:text-lg text-ocean-100">
               Dados em tempo real das melhores praias do Brasil
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-12">
             {beach?.conditions.surfConditions.map((condition, index) => (
               <Card
                 key={index}
@@ -435,16 +482,16 @@ const Index = () => {
                 data-aos="fade-up"
                 data-aos-delay={index * 100}
               >
-                <CardContent className="pt-6">
-                  <condition.icon className="h-8 w-8 mx-auto mb-2 text-ocean-200" />
-                  <p className="text-2xl font-bold text-white">{condition.value}</p>
-                  <p className="text-sm text-ocean-100">{condition.name}</p>
+                <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+                  <condition.icon className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-ocean-200" />
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{condition.value}</p>
+                  <p className="text-xs sm:text-sm text-ocean-100">{condition.name}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-transform duration-200 hover:scale-105" data-aos="fade-up" data-aos-delay="200">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
@@ -456,11 +503,11 @@ const Index = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={340}>
+                <ResponsiveContainer width="100%" height={280}>
                   <AreaChart data={beach?.conditions.swellData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(186,230,253,0.2)" />
-                    <XAxis dataKey="time" tick={{ fill: '#bae6fd' }} />
-                    <YAxis domain={[0, 4]} tick={{ fill: '#bae6fd' }} />
+                    <XAxis dataKey="time" tick={{ fill: '#bae6fd', fontSize: 12 }} />
+                    <YAxis domain={[0, 4]} tick={{ fill: '#bae6fd', fontSize: 12 }} />
                     <Tooltip 
                       formatter={(value) => [`${value}m`, 'Altura']}
                       labelFormatter={(label) => `Horário: ${label}`}
@@ -468,7 +515,8 @@ const Index = () => {
                         backgroundColor: 'rgba(12,74,110,0.9)', 
                         border: '1px solid rgba(186,230,253,0.3)', 
                         borderRadius: '8px',
-                        color: '#fff'
+                        color: '#fff',
+                        fontSize: '14px'
                       }}
                     />
                     <Area 
@@ -499,11 +547,11 @@ const Index = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={beach?.conditions.weeklyForecast}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(186,230,253,0.2)" />
-                    <XAxis dataKey="day" tick={{ fill: '#bae6fd' }} />
-                    <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} allowDecimals={false} tick={{ fill: '#bae6fd' }} />
+                    <XAxis dataKey="day" tick={{ fill: '#bae6fd', fontSize: 12 }} />
+                    <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} allowDecimals={false} tick={{ fill: '#bae6fd', fontSize: 12 }} />
                     <Tooltip 
                       formatter={(value, name) => [
                         name === 'height' ? `${value}m` : `${value} estrelas`, 
@@ -513,7 +561,8 @@ const Index = () => {
                         backgroundColor: 'rgba(12,74,110,0.9)', 
                         border: '1px solid rgba(186,230,253,0.3)', 
                         borderRadius: '8px',
-                        color: '#fff'
+                        color: '#fff',
+                        fontSize: '14px'
                       }}
                     />
                     <Bar dataKey="height" fill="#bae6fd" />
@@ -529,41 +578,41 @@ const Index = () => {
       {/* Features + CTA Section */}
       <section className="py-16 bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16" data-aos="fade-up">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16" data-aos="fade-up">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">
               Tecnologia Avançada para Surfistas
             </h2>
-            <p className="text-lg text-ocean-100 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-ocean-100 max-w-2xl mx-auto">
               Combinamos dados meteorológicos, inteligência artificial e análise preditiva para oferecer as melhores previsões de surf do mercado.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mb-12 sm:mb-16">
             <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-all duration-500 hover:bg-ocean-700/50 hover:scale-105" data-aos="fade-up" data-aos-delay="100">
-              <CardHeader>
-                <Waves className="h-12 w-12 text-ocean-200 mb-4" />
-                <CardTitle className="text-white">Análise de Ondas em Tempo Real</CardTitle>
-                <CardDescription className="text-ocean-100">
+              <CardHeader className="text-center sm:text-left">
+                <Waves className="h-10 w-10 sm:h-12 sm:w-12 text-ocean-200 mb-3 sm:mb-4 mx-auto sm:mx-0" />
+                <CardTitle className="text-white text-lg sm:text-xl">Análise de Ondas em Tempo Real</CardTitle>
+                <CardDescription className="text-ocean-100 text-sm sm:text-base">
                   Dados atualizados a cada hora com precisão de até 95% usando sensores oceânicos e satélites.
                 </CardDescription>
               </CardHeader>
             </Card>
 
             <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-all duration-500 hover:bg-ocean-700/50 hover:scale-105" data-aos="fade-up" data-aos-delay="200">
-              <CardHeader>
-                <MapPin className="h-12 w-12 text-ocean-200 mb-4" />
-                <CardTitle className="text-white">Mapeamento Inteligente</CardTitle>
-                <CardDescription className="text-ocean-100">
+              <CardHeader className="text-center sm:text-left">
+                <MapPin className="h-10 w-10 sm:h-12 sm:w-12 text-ocean-200 mb-3 sm:mb-4 mx-auto sm:mx-0" />
+                <CardTitle className="text-white text-lg sm:text-xl">Mapeamento Inteligente</CardTitle>
+                <CardDescription className="text-ocean-100 text-sm sm:text-base">
                   Visualize condições de surf em centenas de praias com indicadores de qualidade personalizados.
                 </CardDescription>
               </CardHeader>
             </Card>
 
             <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30 transition-all duration-500 hover:bg-ocean-700/50 hover:scale-105" data-aos="fade-up" data-aos-delay="300">
-              <CardHeader>
-                <Users className="h-12 w-12 text-ocean-200 mb-4" />
-                <CardTitle className="text-white">Recomendações Personalizadas</CardTitle>
-                <CardDescription className="text-ocean-100">
+              <CardHeader className="text-center sm:text-left">
+                <Users className="h-10 w-10 sm:h-12 sm:w-12 text-ocean-200 mb-3 sm:mb-4 mx-auto sm:mx-0" />
+                <CardTitle className="text-white text-lg sm:text-xl">Recomendações Personalizadas</CardTitle>
+                <CardDescription className="text-ocean-100 text-sm sm:text-base">
                   IA que aprende suas preferências e nível de habilidade para sugerir as melhores sessões.
                 </CardDescription>
               </CardHeader>
@@ -572,24 +621,25 @@ const Index = () => {
 
           {/* CTA merged here, no colored background */}
           <div className="max-w-4xl mx-auto text-center" data-aos="fade-up" data-aos-delay="400">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4 sm:mb-6">
               Pronto para Surfar as Melhores Ondas?
             </h2>
-            <p className="text-xl text-ocean-100 mb-8">
+            <p className="text-lg sm:text-xl text-ocean-100 mb-6 sm:mb-8">
               Junte-se a milhares de surfistas que já usam a DeepSurf para encontrar as condições perfeitas.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
               <Button 
                 size="lg" 
-                className="bg-white text-ocean-800 hover:bg-gray-100 text-lg px-8 py-4 font-semibold"
+                className="bg-white text-ocean-800 hover:bg-gray-100 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-semibold w-full sm:w-auto"
+                onClick={() => navigate('/account')}
               >
                 Criar Conta Gratuita
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-white text-white bg-transparent hover:bg-white/10 text-lg px-8 py-4 font-semibold"
+                className="border-white text-white bg-transparent hover:bg-white/10 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 font-semibold w-full sm:w-auto"
                 onClick={() => navigate('/map')}
               >
                 Explorar Mapa

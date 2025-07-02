@@ -1,15 +1,131 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DeepSurf</title>
-    <meta name="description" content="Previsões de Ondas baseadas em IA" />
+    <title>DeepSurf - Condições de Surf em Tempo Real</title>
+    <meta name="description" content="Monitore condições de surf em tempo real nas melhores praias do Brasil. Previsões precisas de ondas, vento e temperatura." />
     <meta name="author" content="Luca Aguiar" />
+    <meta name="keywords" content="surf, ondas, previsão, praias, brasil, tempo real, vento, temperatura" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1e40af" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DeepSurf" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="DeepSurf" />
+    
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/png" href="/img/deepsurf.png" />
+    <link rel="apple-touch-icon" href="/img/deepsurf.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/img/deepsurf.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/deepsurf.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/img/deepsurf.png" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Splash Screen for iOS -->
+    <meta name="apple-mobile-web-app-title" content="DeepSurf">
+    <link rel="apple-touch-startup-image" href="/img/banner.jpg">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://deepsurf.app/" />
+    <meta property="og:title" content="DeepSurf - Condições de Surf em Tempo Real" />
+    <meta property="og:description" content="Monitore condições de surf em tempo real nas melhores praias do Brasil" />
+    <meta property="og:image" content="/img/banner.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://deepsurf.app/" />
+    <meta property="twitter:title" content="DeepSurf - Condições de Surf em Tempo Real" />
+    <meta property="twitter:description" content="Monitore condições de surf em tempo real nas melhores praias do Brasil" />
+    <meta property="twitter:image" content="/img/banner.jpg" />
   </head>
 
   <body>
     <div id="root"></div>
+    
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner" style="display: none; position: fixed; bottom: 20px; left: 20px; right: 20px; background: linear-gradient(135deg, #1e40af, #3b82f6); color: white; padding: 16px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 9999; text-align: center;">
+      <div style="margin-bottom: 8px; font-weight: bold;">📱 Instalar DeepSurf</div>
+      <div style="margin-bottom: 12px; font-size: 14px; opacity: 0.9;">Adicione o app à sua tela inicial para acesso rápido!</div>
+      <button id="pwa-install-btn" style="background: white; color: #1e40af; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; margin-right: 8px; cursor: pointer;">Instalar</button>
+      <button id="pwa-dismiss-btn" style="background: transparent; color: white; border: 1px solid white; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Agora não</button>
+    </div>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      // Registrar Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('Service Worker registrado com sucesso:', registration.scope);
+              
+              // Verificar por atualizações
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // Nova versão disponível
+                    if (confirm('Nova versão do DeepSurf disponível! Deseja atualizar?')) {
+                      newWorker.postMessage({ type: 'SKIP_WAITING' });
+                      window.location.reload();
+                    }
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.log('Falha ao registrar Service Worker:', error);
+            });
+        });
+      }
+
+      // PWA Install Prompt
+      let deferredPrompt;
+      let installBanner = document.getElementById('pwa-install-banner');
+      let installBtn = document.getElementById('pwa-install-btn');
+      let dismissBtn = document.getElementById('pwa-dismiss-btn');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('beforeinstallprompt disparado');
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // Verificar se já foi instalado ou dismissado
+        if (!localStorage.getItem('pwa-dismissed') && !window.matchMedia('(display-mode: standalone)').matches) {
+          installBanner.style.display = 'block';
+        }
+      });
+
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('Resultado da instalação:', outcome);
+        
+        deferredPrompt = null;
+        installBanner.style.display = 'none';
+      });
+
+      dismissBtn.addEventListener('click', () => {
+        installBanner.style.display = 'none';
+        localStorage.setItem('pwa-dismissed', 'true');
+      });
+
+      // Detectar se já está instalado
+      window.addEventListener('appinstalled', () => {
+        console.log('DeepSurf foi instalado!');
+        installBanner.style.display = 'none';
+        deferredPrompt = null;
+      });
+    </script>
+    
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>

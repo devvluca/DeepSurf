@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -137,11 +137,58 @@ const Map = () => {
   const [editMode, setEditMode] = useState(false);
   const [draggingPin, setDraggingPin] = useState<string | null>(null);
   const [showAddPin, setShowAddPin] = useState(false);
+  const [saveNotification, setSaveNotification] = useState<string | null>(null);
 
-  // Posições dos pins no SVG (inicialmente vazio)
-  const [pinPositions, setPinPositions] = useState<Record<string, { x: number, y: number }>>({});
+  // Função para mostrar notificação temporária
+  const showSaveNotification = (message: string) => {
+    setSaveNotification(message);
+    setTimeout(() => setSaveNotification(null), 3000); // Remove após 3 segundos
+  };
+
+  // Função para carregar pins salvos do localStorage
+  const loadSavedPins = () => {
+    try {
+      const saved = localStorage.getItem('deepsurf-map-pins');
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.error('Erro ao carregar pins salvos:', error);
+      return {};
+    }
+  };
+
+  // Posições dos pins no SVG - carrega dados salvos na inicialização
+  const [pinPositions, setPinPositions] = useState<Record<string, { x: number, y: number }>>(loadSavedPins);
 
   const [tempPinPositions, setTempPinPositions] = useState<Record<string, { x: number, y: number }>>(pinPositions);
+
+  // UseEffect para sincronizar tempPinPositions com pinPositions na inicialização
+  useEffect(() => {
+    setTempPinPositions(pinPositions);
+    
+    // Mostrar mensagem se houver pins carregados
+    const loadedPinsCount = Object.keys(pinPositions).length;
+    if (loadedPinsCount > 0) {
+      console.log(`${loadedPinsCount} pins carregados do localStorage`);
+      showSaveNotification(`📍 ${loadedPinsCount} pins carregados!`);
+    }
+  }, [pinPositions]);
+
+  // UseEffect para salvar pins no localStorage sempre que pinPositions mudar
+  useEffect(() => {
+    try {
+      localStorage.setItem('deepsurf-map-pins', JSON.stringify(pinPositions));
+      console.log('Pins salvos no localStorage:', pinPositions);
+      
+      // Mostrar notificação apenas se houver pins para salvar e não for o carregamento inicial
+      const hasExistingPins = Object.keys(pinPositions).length > 0;
+      if (hasExistingPins) {
+        showSaveNotification('📍 Pins salvos automaticamente!');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar pins:', error);
+      showSaveNotification('❌ Erro ao salvar pins');
+    }
+  }, [pinPositions]);
 
   // Adicionar pin no centro do mapa
   const addPin = (beachName: string) => {
@@ -150,21 +197,20 @@ const Map = () => {
     setTempPinPositions(prev => ({ ...prev, [beachName]: newPin }));
     setShowAddPin(false);
     setEditMode(true); // Ativar modo de edição automaticamente
+    showSaveNotification(`📍 Pin "${beachName}" adicionado!`);
     console.log(`Pin "${beachName}" adicionado no centro. Use o modo de edição para posicioná-lo.`);
   };
 
   // Remover pin
   const removePin = (beachName: string) => {
-    setPinPositions(prev => {
-      const newPositions = { ...prev };
-      delete newPositions[beachName];
-      return newPositions;
-    });
-    setTempPinPositions(prev => {
-      const newPositions = { ...prev };
-      delete newPositions[beachName];
-      return newPositions;
-    });
+    const newPositions = { ...pinPositions };
+    delete newPositions[beachName];
+    
+    setPinPositions(newPositions);
+    setTempPinPositions(newPositions);
+    
+    showSaveNotification(`🗑️ Pin "${beachName}" removido!`);
+    console.log(`Pin "${beachName}" removido e salvo no localStorage`);
   };
 
   // Praias que ainda não têm pins
@@ -217,7 +263,12 @@ const Map = () => {
 
   const handleMouseUp = () => {
     if (draggingPin) {
-      console.log('Coordenadas finais de todos os pins:', tempPinPositions);
+      // Salvar a posição final do pin arrastado
+      setPinPositions(prev => ({
+        ...prev,
+        ...tempPinPositions
+      }));
+      console.log('Coordenadas finais de todos os pins salvos:', tempPinPositions);
       setDraggingPin(null);
     }
     setDragging(false);
@@ -246,35 +297,35 @@ const Map = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-gray-800 to-slate-700 pt-16">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 pt-16">
       <Header />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
             Mapa de Ondas
           </h1>
-          <p className="text-lg text-slate-200">
+          <p className="text-base sm:text-lg text-ocean-100">
             Visualize condições de surf em tempo real nas melhores praias
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Map Area */}
-          <div className="lg:col-span-2">
-            <Card className="h-[600px]">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MapPin className="h-5 w-5 mr-2 text-ocean-600" />
+          <div className="lg:col-span-2 order-1">
+            <Card className="h-[400px] sm:h-[500px] lg:h-[600px] bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
+              <CardHeader className="pb-2 sm:pb-6">
+                <CardTitle className="flex items-center text-slate-100 text-base sm:text-lg">
+                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-300" />
                   Mapa Interativo
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-slate-300 text-sm sm:text-base">
                   Clique nos marcadores para ver detalhes das condições
                 </CardDescription>
               </CardHeader>
-              <CardContent className="h-full">
+              <CardContent className="h-full p-2 sm:p-6">
                 <div
-                  className="relative w-full h-[500px] flex items-center justify-center select-none overflow-hidden"
+                  className="relative w-full h-[300px] sm:h-[400px] lg:h-[500px] flex items-center justify-center select-none overflow-hidden"
                   style={{ cursor: dragging ? 'grabbing' : editMode ? 'crosshair' : 'grab' }}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
@@ -294,6 +345,13 @@ const Map = () => {
                     document.body.style.overflow = 'hidden';
                   }}
                 >
+                  {/* Notificação de salvamento */}
+                  {saveNotification && (
+                    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg z-30 animate-bounce">
+                      {saveNotification}
+                    </div>
+                  )}
+
                   {/* SVG MAPA como fundo */}
                   <img
                     src="/img/mapa-brasil.svg"
@@ -387,13 +445,14 @@ const Map = () => {
                   </svg>
 
                   {/* Zoom controls */}
-                  <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
-                    <Button size="icon" variant="outline" onClick={() => setZoom(z => Math.min(z + 0.2, 2.5))}>+</Button>
-                    <Button size="icon" variant="outline" onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))}>-</Button>
+                  <div className="absolute top-2 sm:top-4 right-2 sm:right-4 flex flex-col gap-1 sm:gap-2 z-10">
+                    <Button size="sm" variant="outline" className="bg-ocean-800/60 border-ocean-600/50 text-white hover:bg-ocean-700/80 h-8 w-8 sm:h-10 sm:w-10 text-sm sm:text-base" onClick={() => setZoom(z => Math.min(z + 0.2, 2.5))}>+</Button>
+                    <Button size="sm" variant="outline" className="bg-ocean-800/60 border-ocean-600/50 text-white hover:bg-ocean-700/80 h-8 w-8 sm:h-10 sm:w-10 text-sm sm:text-base" onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))}>-</Button>
                     {/* Botão para modo de edição */}
                     <Button 
-                      size="icon" 
+                      size="sm" 
                       variant={editMode ? "destructive" : "outline"}
+                      className={editMode ? "h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm" : "bg-ocean-800/60 border-ocean-600/50 text-white hover:bg-ocean-700/80 h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm"}
                       onClick={() => {
                         setEditMode(!editMode);
                         if (!editMode) {
@@ -406,15 +465,31 @@ const Map = () => {
                     >
                       {editMode ? "✓" : "✎"}
                     </Button>
+                    {/* Botão para limpar todos os pins */}
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="bg-red-600/60 border-red-500/50 text-white hover:bg-red-500/80 h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm"
+                      onClick={() => {
+                        setPinPositions({});
+                        setTempPinPositions({});
+                        localStorage.removeItem('deepsurf-map-pins');
+                        showSaveNotification('🗑️ Todos os pins removidos!');
+                        console.log('Todos os pins foram removidos');
+                      }}
+                      title="Limpar todos os pins"
+                    >
+                      🗑️
+                    </Button>
                   </div>
 
                   {/* Menu para adicionar pins - movido para cima da legenda */}
                   {showAddPin && (
                     <div 
-                      className="absolute bottom-20 left-4 bg-white rounded-lg shadow-lg border p-3 z-20 w-64"
+                      className="absolute bottom-20 left-4 bg-ocean-800/90 backdrop-blur-sm rounded-lg shadow-xl border border-ocean-600/30 p-3 z-20 w-64"
                       onWheel={(e) => e.stopPropagation()} // Impede o zoom do mapa quando scrollar na lista
                     >
-                      <h4 className="font-medium text-sm mb-2">Escolha uma Praia</h4>
+                      <h4 className="font-medium text-sm mb-2 text-slate-100">Escolha uma Praia</h4>
                       {availableBeaches.length > 0 ? (
                         <div 
                           className="space-y-2 max-h-48 overflow-y-auto"
@@ -424,25 +499,25 @@ const Map = () => {
                             <button
                               key={beach.id}
                               onClick={() => addPin(beach.name)}
-                              className="w-full text-left p-2 rounded hover:bg-ocean-50 transition-colors text-sm border border-gray-100 hover:border-ocean-200"
+                              className="w-full text-left p-2 rounded hover:bg-ocean-700/50 transition-colors text-sm border border-ocean-600/30 hover:border-ocean-500/50 bg-ocean-700/30"
                             >
                               <div className="flex items-center justify-between">
-                                <span className="font-medium">{beach.name}</span>
+                                <span className="font-medium text-slate-100">{beach.name}</span>
                                 <div className={`w-3 h-3 rounded-full ${beach.color}`}></div>
                               </div>
-                              <div className="text-xs text-gray-500">{beach.city}</div>
+                              <div className="text-xs text-slate-300">{beach.city}</div>
                             </button>
                           ))}
                         </div>
                       ) : (
                         <div className="text-center py-4">
-                          <p className="text-sm text-gray-500 mb-2">🎉 Todos os pins foram adicionados!</p>
-                          <p className="text-xs text-gray-400">Use o botão ✎ para editar posições</p>
+                          <p className="text-sm text-slate-200 mb-2">🎉 Todos os pins foram adicionados!</p>
+                          <p className="text-xs text-slate-300">Use o botão ✎ para editar posições</p>
                         </div>
                       )}
                       <button
                         onClick={() => setShowAddPin(false)}
-                        className="mt-2 w-full text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                        className="mt-2 w-full text-xs text-slate-300 hover:text-slate-100 transition-colors"
                       >
                         Fechar
                       </button>
@@ -453,38 +528,38 @@ const Map = () => {
                   <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
                     <button
                       onClick={() => setShowAddPin(!showAddPin)}
-                      className="bg-white hover:bg-ocean-50 transition-all duration-200 px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl border border-gray-200 hover:border-ocean-300 flex items-center space-x-3 group"
+                      className="bg-ocean-800/80 backdrop-blur-sm hover:bg-ocean-700/90 transition-all duration-200 px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl border border-ocean-600/30 hover:border-ocean-500/50 flex items-center space-x-3 group"
                     >
                       <div className="w-8 h-8 bg-ocean-gradient rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                         <span className="text-white font-bold text-lg">📍</span>
                       </div>
                       <div className="text-left">
-                        <div className="font-semibold text-gray-800 text-sm">Adicionar Pin de Praia</div>
-                        <div className="text-xs text-gray-500">Marque suas praias favoritas no mapa</div>
+                        <div className="font-semibold text-slate-100 text-sm">Adicionar Pin de Praia</div>
+                        <div className="text-xs text-slate-300">Marque suas praias favoritas no mapa</div>
                       </div>
                       <div className="w-2 h-2 bg-ocean-400 rounded-full animate-pulse"></div>
                     </button>
                   </div>
 
                   {/* Legenda */}
-                  <div className="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg w-fit">
-                    <h3 className="font-semibold mb-2 text-sm">Legenda</h3>
+                  <div className="absolute bottom-4 left-4 bg-ocean-800/80 backdrop-blur-sm border border-ocean-600/30 p-4 rounded-lg shadow-lg w-fit">
+                    <h3 className="font-semibold mb-2 text-sm text-slate-100">Legenda</h3>
                     <div className="space-y-1 text-xs">
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                        <span>Excelente (5★)</span>
+                        <span className="text-slate-200">Excelente (5★)</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                        <span>Bom (4★)</span>
+                        <span className="text-slate-200">Bom (4★)</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                        <span>Moderado (3★)</span>
+                        <span className="text-slate-200">Moderado (3★)</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                        <span>Fraco (1-2★)</span>
+                        <span className="text-slate-200">Fraco (1-2★)</span>
                       </div>
                     </div>
                   </div>
@@ -494,23 +569,24 @@ const Map = () => {
           </div>
 
           {/* Beach Details Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6 order-2">
             {/* Selected Beach Details */}
             {selectedBeach && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+              <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="flex items-center justify-between text-slate-100 text-base sm:text-lg">
                     <span>Detalhes da Praia</span>
                     <Button 
                       variant="ghost" 
                       size="sm"
+                      className="text-slate-300 hover:text-slate-100 hover:bg-ocean-700/50 h-8 w-8 p-0"
                       onClick={() => setSelectedBeach(null)}
                     >
                       ×
                     </Button>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   {(() => {
                     const beach = beaches.find(b => b.id === selectedBeach);
                     if (!beach) return null;
@@ -518,8 +594,8 @@ const Map = () => {
                     return (
                       <div className="space-y-4">
                         <div>
-                          <h3 className="font-bold text-lg">{beach.name}</h3>
-                          <p className="text-gray-600">{beach.city}</p>
+                          <h3 className="font-bold text-lg text-slate-100">{beach.name}</h3>
+                          <p className="text-slate-300">{beach.city}</p>
                         </div>
                         
                         <div className="flex items-center space-x-2">
@@ -529,40 +605,40 @@ const Map = () => {
                           </Badge>
                         </div>
 
-                        <p className="text-sm text-gray-700">{beach.description}</p>
+                        <p className="text-sm text-slate-200">{beach.description}</p>
 
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div className="flex items-center space-x-2">
-                            <Waves className="h-4 w-4 text-ocean-600" />
+                            <Waves className="h-4 w-4 text-blue-300" />
                             <div>
-                              <p className="font-medium">{beach.waveHeight}</p>
-                              <p className="text-gray-500">Altura</p>
+                              <p className="font-medium text-slate-100">{beach.waveHeight}</p>
+                              <p className="text-slate-300">Altura</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <Wind className="h-4 w-4 text-blue-600" />
+                            <Wind className="h-4 w-4 text-blue-300" />
                             <div>
-                              <p className="font-medium">{beach.wind}</p>
-                              <p className="text-gray-500">Vento</p>
+                              <p className="font-medium text-slate-100">{beach.wind}</p>
+                              <p className="text-slate-300">Vento</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <Waves className="h-4 w-4 text-teal-600" />
+                            <Waves className="h-4 w-4 text-teal-300" />
                             <div>
-                              <p className="font-medium">{beach.period}</p>
-                              <p className="text-gray-500">Período</p>
+                              <p className="font-medium text-slate-100">{beach.period}</p>
+                              <p className="text-slate-300">Período</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <Thermometer className="h-4 w-4 text-orange-600" />
+                            <Thermometer className="h-4 w-4 text-orange-300" />
                             <div>
-                              <p className="font-medium">{beach.temperature}</p>
-                              <p className="text-gray-500">Temperatura</p>
+                              <p className="font-medium text-slate-100">{beach.temperature}</p>
+                              <p className="text-slate-300">Temperatura</p>
                             </div>
                           </div>
                         </div>
 
-                        <Button className="w-full bg-ocean-gradient text-white">
+                        <Button className="w-full bg-ocean-gradient text-white hover:opacity-90">
                           <Eye className="h-4 w-4 mr-2" />
                           Ver Previsão Detalhada
                         </Button>
@@ -574,10 +650,10 @@ const Map = () => {
             )}
 
             {/* Beach List */}
-            <Card>
+            <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
               <CardHeader>
-                <CardTitle>Praias Monitoradas</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-slate-100">Praias Monitoradas</CardTitle>
+                <CardDescription className="text-slate-300">
                   Clique para ver detalhes no mapa
                 </CardDescription>
               </CardHeader>
@@ -586,15 +662,15 @@ const Map = () => {
                   {beaches.map((beach) => (
                     <div
                       key={beach.id}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
-                        selectedBeach === beach.id ? 'bg-ocean-50 border border-ocean-200' : 'bg-white border'
+                      className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-ocean-700/50 ${
+                        selectedBeach === beach.id ? 'bg-ocean-600/50 border border-ocean-500/50' : 'bg-ocean-700/30 border border-ocean-600/30'
                       }`}
                       onClick={() => setSelectedBeach(beach.id)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h4 className="font-medium">{beach.name}</h4>
-                          <p className="text-xs text-gray-500">{beach.city}</p>
+                          <h4 className="font-medium text-slate-100">{beach.name}</h4>
+                          <p className="text-xs text-slate-300">{beach.city}</p>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge 
@@ -610,7 +686,7 @@ const Map = () => {
                                 e.stopPropagation();
                                 removePin(beach.name);
                               }}
-                              className="text-red-500 hover:text-red-700 text-xs ml-2"
+                              className="text-red-400 hover:text-red-300 text-xs ml-2"
                               title="Remover pin"
                             >
                               ✕
@@ -618,7 +694,7 @@ const Map = () => {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4 mt-2 text-xs text-gray-600">
+                      <div className="flex items-center space-x-4 mt-2 text-xs text-slate-300">
                         <span className="flex items-center space-x-1">
                           <Waves className="h-3 w-3" />
                           <span>{beach.waveHeight}</span>

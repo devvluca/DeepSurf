@@ -52,7 +52,7 @@ const Account = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-gray-800 to-slate-700 pt-16">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 pt-16">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
@@ -60,7 +60,7 @@ const Account = () => {
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
             Minha Conta
           </h1>
-          <p className="text-lg text-slate-200">
+          <p className="text-lg text-ocean-100">
             Gerencie suas configurações e informações pessoais
           </p>
         </div>
@@ -70,11 +70,11 @@ const Account = () => {
           <div className="w-20 h-20 bg-gradient-to-br from-ocean-600 to-ocean-800 rounded-full flex items-center justify-center mx-auto mb-4">
             <User className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-white mb-2">
             {getFormattedFirstName(user)}
           </h1>
-          <p className="text-gray-600">{user?.email}</p>
-          <Badge variant="secondary" className="mt-2">
+          <p className="text-ocean-200">{user?.email}</p>
+          <Badge variant="secondary" className="mt-2 bg-ocean-700/50 text-ocean-100">
             <Waves className="h-3 w-3 mr-1" />
             Membro desde {user && 'created_at' in user && user.created_at
               ? new Date(user.created_at as string).getFullYear()
@@ -84,38 +84,38 @@ const Account = () => {
 
         <div className="grid md:grid-cols-2 gap-6">
           {/* Informações Pessoais */}
-          <Card>
+          <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <User className="h-5 w-5 mr-2 text-ocean-600" />
+              <CardTitle className="flex items-center text-white">
+                <User className="h-5 w-5 mr-2 text-ocean-300" />
                 Informações Pessoais
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-ocean-100">
                 Gerencie suas informações de perfil
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-ocean-200">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1"
+                  className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white placeholder-ocean-300"
                 />
               </div>
               <div>
-                <Label htmlFor="city">Cidade Principal</Label>
+                <Label htmlFor="city" className="text-ocean-200">Cidade Principal</Label>
                 <Select value={selectedCity} onValueChange={setSelectedCity}>
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white">
                     <SelectValue placeholder="Selecione sua cidade" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-ocean-800 border-ocean-600">
                     {cities.map((city) => (
-                      <SelectItem key={city.value} value={city.value}>
+                      <SelectItem key={city.value} value={city.value} className="text-white hover:bg-ocean-700">
                         <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-2 text-ocean-600" />
+                          <MapPin className="h-4 w-4 mr-2 text-ocean-300" />
                           {city.label}
                         </div>
                       </SelectItem>
@@ -124,16 +124,16 @@ const Account = () => {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="level">Nível de Surf</Label>
+                <Label htmlFor="level" className="text-ocean-200">Nível de Surf</Label>
                 <Select defaultValue="intermediario">
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white">
                     <SelectValue placeholder="Selecione seu nível" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-ocean-800 border-ocean-600">
                     {surfLevel.map((level) => (
-                      <SelectItem key={level.value} value={level.value}>
+                      <SelectItem key={level.value} value={level.value} className="text-white hover:bg-ocean-700">
                         <div className="flex items-center">
-                          <Waves className="h-4 w-4 mr-2 text-ocean-600" />
+                          <Waves className="h-4 w-4 mr-2 text-ocean-300" />
                           {level.label}
                         </div>
                       </SelectItem>
@@ -141,58 +141,58 @@ const Account = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button className="w-full bg-ocean-gradient text-white">
+              <Button className="w-full bg-ocean-gradient text-white hover:opacity-90">
                 Salvar Alterações
               </Button>
             </CardContent>
           </Card>
 
           {/* Preferências */}
-          <Card>
+          <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2 text-ocean-600" />
+              <CardTitle className="flex items-center text-white">
+                <Settings className="h-5 w-5 mr-2 text-ocean-300" />
                 Preferências
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-ocean-100">
                 Configure suas preferências de surf
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <Bell className="h-4 w-4 text-ocean-600" />
+                  <Bell className="h-4 w-4 text-ocean-300" />
                   <div>
-                    <Label className="text-sm font-medium">Notificações Push</Label>
-                    <p className="text-xs text-gray-500">Alertas de swells e condições</p>
+                    <Label className="text-sm font-medium text-white">Notificações Push</Label>
+                    <p className="text-xs text-ocean-200">Alertas de swells e condições</p>
                   </div>
                 </div>
                 <Button
                   variant={notifications ? "default" : "outline"}
                   size="sm"
                   onClick={() => setNotifications(!notifications)}
-                  className={notifications ? "bg-ocean-600" : ""}
+                  className={notifications ? "bg-ocean-600 hover:bg-ocean-700" : "border-ocean-600 text-ocean-200 hover:bg-ocean-700/50"}
                 >
                   {notifications ? "Ativado" : "Desativado"}
                 </Button>
               </div>
               
-              <Separator />
+              <Separator className="bg-ocean-600/30" />
               
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Alertas Personalizados</Label>
+                <Label className="text-sm font-medium text-white">Alertas Personalizados</Label>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Ondas {'>'} 1.5m</span>
-                    <Button variant="outline" size="sm">Ativar</Button>
+                    <span className="text-sm text-ocean-100">Ondas {'>'} 1.5m</span>
+                    <Button variant="outline" size="sm" className="border-ocean-600 text-ocean-200 hover:bg-ocean-700/50">Ativar</Button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Vento offshore</span>
-                    <Button variant="outline" size="sm">Ativar</Button>
+                    <span className="text-sm text-ocean-100">Vento offshore</span>
+                    <Button variant="outline" size="sm" className="border-ocean-600 text-ocean-200 hover:bg-ocean-700/50">Ativar</Button>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Período {'>'} 10s</span>
-                    <Button variant="outline" size="sm">Ativar</Button>
+                    <span className="text-sm text-ocean-100">Período {'>'} 10s</span>
+                    <Button variant="outline" size="sm" className="border-ocean-600 text-ocean-200 hover:bg-ocean-700/50">Ativar</Button>
                   </div>
                 </div>
               </div>
@@ -200,26 +200,26 @@ const Account = () => {
           </Card>
 
           {/* Suporte */}
-          <Card>
+          <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <MessageSquare className="h-5 w-5 mr-2 text-ocean-600" />
+              <CardTitle className="flex items-center text-white">
+                <MessageSquare className="h-5 w-5 mr-2 text-ocean-300" />
                 Suporte
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-ocean-100">
                 Precisa de ajuda? Entre em contato
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start bg-ocean-700/30 border-ocean-600/50 text-ocean-100 hover:bg-ocean-600/50">
                 <Mail className="h-4 w-4 mr-2" />
                 Enviar Email
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start bg-ocean-700/30 border-ocean-600/50 text-ocean-100 hover:bg-ocean-600/50">
                 <Phone className="h-4 w-4 mr-2" />
                 WhatsApp
               </Button>
-              <Button variant="outline" className="w-full justify-start text-amber-600 hover:text-amber-700">
+              <Button variant="outline" className="w-full justify-start text-amber-400 hover:text-amber-300 bg-amber-900/20 border-amber-600/50 hover:bg-amber-800/30">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Relatar um Problema
               </Button>
@@ -227,27 +227,27 @@ const Account = () => {
           </Card>
 
           {/* Configurações de Conta */}
-          <Card>
+          <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Shield className="h-5 w-5 mr-2 text-ocean-600" />
+              <CardTitle className="flex items-center text-white">
+                <Shield className="h-5 w-5 mr-2 text-ocean-300" />
                 Conta
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-ocean-100">
                 Configurações de segurança e conta
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start bg-ocean-700/30 border-ocean-600/50 text-ocean-100 hover:bg-ocean-600/50">
                 <Settings className="h-4 w-4 mr-2" />
                 Alterar Senha
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start bg-ocean-700/30 border-ocean-600/50 text-ocean-100 hover:bg-ocean-600/50">
                 <Shield className="h-4 w-4 mr-2" />
                 Privacidade
               </Button>
-              <Separator />
-              <Button variant="destructive" className="w-full justify-start">
+              <Separator className="bg-ocean-600/30" />
+              <Button variant="destructive" className="w-full justify-start bg-red-900/50 border-red-600/50 text-red-300 hover:bg-red-800/60">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Deletar Conta
               </Button>

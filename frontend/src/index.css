@@ -111,3 +111,88 @@
     background-position: 0% 50%;
   }
 }
+
+/* Animações para a onda do typewriter */
+@keyframes wave-flow {
+  0% { 
+    stroke-dasharray: 0 50;
+    stroke-dashoffset: 0;
+    opacity: 0.3;
+  }
+  50% { 
+    stroke-dasharray: 25 25;
+    stroke-dashoffset: -12.5;
+    opacity: 1;
+  }
+  100% { 
+    stroke-dasharray: 50 0;
+    stroke-dashoffset: -50;
+    opacity: 0.3;
+  }
+}
+
+@keyframes wave-reverse {
+  0% { 
+    stroke-dasharray: 50 0;
+    stroke-dashoffset: -50;
+    opacity: 1;
+  }
+  50% { 
+    stroke-dasharray: 25 25;
+    stroke-dashoffset: -12.5;
+    opacity: 0.5;
+  }
+  100% { 
+    stroke-dasharray: 0 50;
+    stroke-dashoffset: 0;
+    opacity: 0.2;
+  }
+}
+
+.animate-wave-flow {
+  animation: wave-flow 2s ease-in-out infinite;
+}
+
+.animate-wave-reverse {
+  animation: wave-reverse 1.5s ease-in-out infinite;
+}
+
+/* Animações PWA */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+/* PWA Splash Screen Style */
+@media (display-mode: standalone) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
