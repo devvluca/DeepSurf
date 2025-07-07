@@ -76,9 +76,16 @@ const Account = () => {
           <p className="text-ocean-200">{user?.email}</p>
           <Badge variant="secondary" className="mt-2 bg-ocean-700/50 text-ocean-100">
             <Waves className="h-3 w-3 mr-1" />
-            Membro desde {user && 'created_at' in user && user.created_at
-              ? new Date(user.created_at as string).getFullYear()
-              : 'Ano desconhecido'}
+            Membro desde {(() => {
+              if ((user as any)?.created_at) {
+                return new Date((user as any).created_at).getFullYear();
+              }
+              if ((user as any)?.user_metadata?.created_at) {
+                return new Date((user as any).user_metadata.created_at).getFullYear();
+              }
+              // Fallback para ano atual se não conseguir determinar
+              return new Date().getFullYear();
+            })()}
           </Badge>
         </div>
 

@@ -245,36 +245,8 @@ const TypewriterEffect = ({ phrases, typingSpeed = 80, deletingSpeed = 50, pause
 
 const Index = () => {
   const [selectedBeach, setSelectedBeach] = useState(beaches[0].id);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [nearbyBeaches, setNearbyBeaches] = useState(beaches);
   const navigate = useNavigate();
-
-  // Solicita localização do usuário ao carregar
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        },
-        () => {
-          setUserLocation(null); // Usuário negou ou erro
-        }
-      );
-    }
-  }, []);
-
-  // Filtra praias próximas (raio de 100km)
-  useEffect(() => {
-    if (userLocation) {
-      const filtered = beaches.filter(b =>
-        getDistanceFromLatLonInKm(userLocation.lat, userLocation.lng, b.lat, b.lng) < 100
-      );
-      setNearbyBeaches(filtered.length > 0 ? filtered : beaches);
-      if (filtered.length > 0) setSelectedBeach(filtered[0].id);
-    } else {
-      setNearbyBeaches(beaches);
-    }
-  }, [userLocation]);
 
   const beach = nearbyBeaches.find(b => b.id === selectedBeach);
 
@@ -309,7 +281,7 @@ const Index = () => {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-ocean-900 via-ocean-800 to-ocean-600 min-h-screen flex items-center">
+      <section className="relative overflow-hidden bg-gradient-to-br from-ocean-900 via-ocean-800 to-ocean-600 min-h-screen flex items-center pt-16">
         {/* Banner de fundo */}
         <img
           src="/img/banner.jpg"
@@ -347,9 +319,9 @@ const Index = () => {
                   size="lg"
                   variant="outline"
                   className="border-white text-white bg-transparent hover:bg-white/10 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
-                  onClick={() => navigate('/map')}
+                  onClick={() => navigate('/profile')}
                 >
-                  Ver Demonstração
+                  Perfil
                 </Button>
               </div>
               
@@ -400,7 +372,7 @@ const Index = () => {
                             <span className="underline cursor-pointer">{beach?.name}</span>
                           </SelectTrigger>
                           <SelectContent className="bg-white">
-                            {nearbyBeaches.map((beach) => (
+                            {beaches.map((beach) => (
                               <SelectItem key={beach.id} value={beach.id}>
                                 {beach.name}
                               </SelectItem>

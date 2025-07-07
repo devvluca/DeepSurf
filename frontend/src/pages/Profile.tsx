@@ -30,6 +30,7 @@ const Profile = () => {
   const [surfSessions, setSurfSessions] = useState<any[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
+  const [progressFilter, setProgressFilter] = useState<'all' | 'year' | 'month'>('all');
   const [newSession, setNewSession] = useState({
     date: new Date().toISOString().split('T')[0], // Data de hoje como padrão
     location: '',
@@ -39,114 +40,7 @@ const Profile = () => {
     notes: ''
   });
 
-  // Busca perfil do banco quando usuário carrega
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      setProfileLoading(true);
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      if (data) {
-        setProfileData(data);
-      } else {
-        // Cria perfil se não existir
-        await supabase.from('profiles').upsert({
-          id: user.id,
-          name: user.name,
-          email: user.email
-        });
-        setProfileData({ id: user.id, name: user.name, email: user.email });
-      }
-      setProfileLoading(false);
-    };
-    fetchProfile();
-  }, [user]);
-
-  // Atualiza formData quando profileData mudar
-  useEffect(() => {
-    if (profileData) {
-      setFormData({
-        name: profileData.name || '',
-        email: profileData.email || '',
-        boardType: profileData.board_type || '',
-        weight: profileData.weight || 0,
-        level: profileData.level || '',
-        preferences: profileData.preferences || ''
-      });
-    }
-  }, [profileData]);
-
-  // Busca sessões do usuário
-  useEffect(() => {
-    const fetchSessions = async () => {
-      if (!user) return;
-      setSessionsLoading(true);
-      const { data, error } = await supabase
-        .from('surf_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
-      if (!error && data) setSurfSessions(data);
-      setSessionsLoading(false);
-    };
-    if (user) fetchSessions();
-  }, [user]);
-
-  const handleSave = async () => {
-    await updateProfile({
-      name: formData.name,
-      board_type: formData.boardType,
-      weight: formData.weight,
-      level: formData.level,
-      preferences: formData.preferences,
-    });
-    setEditMode(false);
-  };
-
-  // Adicionar nova sessão
-  const handleAddSession = async () => {
-    if (!user) return;
-    if (!newSession.date || !newSession.location || !newSession.duration || !newSession.waves) return;
-    const { data, error } = await supabase.from('surf_sessions').insert([
-      { ...newSession, user_id: user.id }
-    ]).select();
-    if (!error && data) {
-      setSurfSessions([data[0], ...surfSessions]);
-      setNewSession({
-        date: new Date().toISOString().split('T')[0], // Resetar para hoje novamente
-        location: '',
-        duration: '',
-        waves: '',
-        rating: 3,
-        notes: ''
-      });
-    }
-  };
-
-  // Excluir sessão
-  const handleDeleteSession = async (id: number) => {
-    await supabase.from('surf_sessions').delete().eq('id', id);
-    setSurfSessions(surfSessions.filter(s => s.id !== id));
-  };
-
-  // Editar sessão
-  const handleEditSession = (id: number) => {
-    setEditingSessionId(id);
-  };
-
-  // Salvar edição de sessão
-  const handleSaveSession = async (id: number, updated: typeof newSession) => {
-    const { error } = await supabase.from('surf_sessions').update(updated).eq('id', id);
-    if (!error) {
-      setSurfSessions(surfSessions.map(s => s.id === id ? { ...s, ...updated } : s));
-      setEditingSessionId(null);
-    }
-  };
-
-  // Estatísticas reais
+  // Estatísticas reais - MOVIDO PARA CIMA ANTES DOS RETURNS
   const stats = React.useMemo(() => {
     if (!surfSessions.length) {
       return {
@@ -173,31 +67,58 @@ const Profile = () => {
     return { total, avgRating, totalHours, beaches };
   }, [surfSessions]);
 
-  // Progresso dos últimos meses para o gráfico
+  // Progresso dos últimos meses para o gráfico - MOVIDO PARA CIMA
   const progressData = React.useMemo(() => {
-    // Agrupa sessões por mês (YYYY-MM)
-    const monthsMap: { [key: string]: { sessions: number; totalRating: number } } = {};
-    surfSessions.forEach((s) => {
+    if (!surfSessions.length) return [];
+
+    const now = new Date();
+    let filteredSessions = surfSessions;
+
+    // Filtrar sessões baseado no período selecionado
+    if (progressFilter === 'year') {
+      const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      filteredSessions = surfSessions.filter(s => new Date(s.date) >= yearAgo);
+    } else if (progressFilter === 'month') {
+      const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      filteredSessions = surfSessions.filter(s => new Date(s.date) >= monthAgo);
+    }
+
+    // Agrupa sessões por período baseado no filtro
+    const periodsMap: { [key: string]: { sessions: number; totalRating: number } } = {};
+    
+    filteredSessions.forEach((s) => {
       const date = new Date(s.date);
-      const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      if (!monthsMap[month]) {
-        monthsMap[month] = { sessions: 0, totalRating: 0 };
+      let period: string;
+      
+      if (progressFilter === 'month') {
+        // Para filtro mensal, agrupa por semana
+        const weekStart = new Date(date);
+        weekStart.setDate(date.getDate() - date.getDay());
+        period = `Sem ${Math.ceil(date.getDate() / 7)} - ${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      } else {
+        // Para filtro anual ou tudo, agrupa por mês
+        period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       }
-      monthsMap[month].sessions += 1;
-      monthsMap[month].totalRating += s.rating || 0;
+      
+      if (!periodsMap[period]) {
+        periodsMap[period] = { sessions: 0, totalRating: 0 };
+      }
+      periodsMap[period].sessions += 1;
+      periodsMap[period].totalRating += s.rating || 0;
     });
-    // Ordena meses e prepara dados
-    const months = Object.keys(monthsMap).sort();
-    return months.map((month) => ({
-      month,
-      sessions: monthsMap[month].sessions,
-      avgRating: monthsMap[month].sessions
-        ? Number((monthsMap[month].totalRating / monthsMap[month].sessions).toFixed(2))
+
+    // Ordena períodos e prepara dados
+    const periods = Object.keys(periodsMap).sort();
+    return periods.map((period) => ({
+      period: progressFilter === 'month' ? period : period.substring(5), // Remove ano se não for filtro mensal
+      sessions: periodsMap[period].sessions,
+      avgRating: periodsMap[period].sessions
+        ? Number((periodsMap[period].totalRating / periodsMap[period].sessions).toFixed(2))
         : 0,
     }));
-  }, [surfSessions]);
+  }, [surfSessions, progressFilter]);
 
-  // Recomendações baseadas no histórico real
+  // Recomendações baseadas no histórico real - MOVIDO PARA CIMA
   const recommendations = React.useMemo(() => {
     if (!surfSessions.length) {
       return [
@@ -312,30 +233,233 @@ const Profile = () => {
     return recs.slice(0, 3); // Máximo 3 recomendações
   }, [surfSessions]);
 
+  // Busca perfil do banco quando usuário carrega
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      setProfileLoading(true);
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setProfileData(data);
+      } else {
+        // Cria perfil se não existir
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          name: user.name,
+          email: user.email
+        });
+        setProfileData({ id: user.id, name: user.name, email: user.email });
+      }
+      setProfileLoading(false);
+    };
+    fetchProfile();
+  }, [user]);
+
+  // Atualiza formData quando profileData mudar
+  useEffect(() => {
+    if (profileData) {
+      setFormData({
+        name: profileData.name || '',
+        email: profileData.email || '',
+        boardType: profileData.board_type || '',
+        weight: profileData.weight || 0,
+        level: profileData.level || '',
+        preferences: profileData.preferences || ''
+      });
+    }
+  }, [profileData]);
+
+  // Busca sessões do usuário
+  useEffect(() => {
+    const fetchSessions = async () => {
+      if (!user) return;
+      setSessionsLoading(true);
+      const { data, error } = await supabase
+        .from('surf_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+      if (!error && data) setSurfSessions(data);
+      setSessionsLoading(false);
+    };
+    if (user) fetchSessions();
+  }, [user]);
+
+  const handleSave = async () => {
+    await updateProfile({
+      name: formData.name,
+      board_type: formData.boardType,
+      weight: formData.weight,
+      level: formData.level,
+      preferences: formData.preferences,
+    });
+    setEditMode(false);
+  };
+
+  // Adicionar nova sessão
+  const handleAddSession = async () => {
+    if (!user) return;
+    if (!newSession.date || !newSession.location || !newSession.duration || !newSession.waves) return;
+    
+    // Validação de limite de caracteres para notas
+    if (newSession.notes.length > 500) {
+      alert('As notas devem ter no máximo 500 caracteres.');
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase.from('surf_sessions').insert([
+        { ...newSession, user_id: user.id }
+      ]).select();
+      
+      if (!error && data) {
+        setSurfSessions([data[0], ...surfSessions]);
+        // Feedback visual positivo
+        const successMessage = document.createElement('div');
+        successMessage.textContent = '✅ Sessão adicionada com sucesso!';
+        successMessage.className = 'fixed top-20 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in';
+        document.body.appendChild(successMessage);
+        setTimeout(() => successMessage.remove(), 3000);
+        
+        // Reset do formulário
+        setNewSession({
+          date: new Date().toISOString().split('T')[0],
+          location: '',
+          duration: '',
+          waves: '',
+          rating: 3,
+          notes: ''
+        });
+      } else {
+        throw new Error(error?.message || 'Erro ao adicionar sessão');
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar sessão:', error);
+      const errorMessage = document.createElement('div');
+      errorMessage.textContent = '❌ Erro ao adicionar sessão. Tente novamente.';
+      errorMessage.className = 'fixed top-20 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in';
+      document.body.appendChild(errorMessage);
+      setTimeout(() => errorMessage.remove(), 3000);
+    }
+  };
+
+  // Excluir sessão
+  const handleDeleteSession = async (id: number) => {
+    await supabase.from('surf_sessions').delete().eq('id', id);
+    setSurfSessions(surfSessions.filter(s => s.id !== id));
+  };
+
+  // Editar sessão
+  const handleEditSession = (id: number) => {
+    setEditingSessionId(id);
+  };
+
+  // Salvar edição de sessão
+  const handleSaveSession = async (id: number, updated: typeof newSession) => {
+    const { error } = await supabase.from('surf_sessions').update(updated).eq('id', id);
+    if (!error) {
+      setSurfSessions(surfSessions.map(s => s.id === id ? { ...s, ...updated } : s));
+      setEditingSessionId(null);
+    }
+  };
+
   // MUDAR ESTA CONDIÇÃO - só esperar o auth, não as sessões
   if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   }
 
   if (!user) {
-    const [isLoginOpen, setIsLoginOpen] = useState(false);
-
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 pt-16">
         <Header />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Acesso Negado
-            </h1>
-            <p className="text-lg text-gray-600 mb-8">
-              Você precisa estar logado para acessar seu perfil.
-            </p>
-            <Button className="bg-ocean-gradient text-white" onClick={() => setIsLoginOpen(true)}>
-              Fazer Login
-            </Button>
+        
+        {/* Hero Section com fundo oceânico */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-ocean-900 via-ocean-800 to-ocean-600 min-h-[calc(100vh-4rem)] flex items-center">
+          {/* Fundo com ondas animadas */}
+          <div className="absolute inset-0 wave-animation opacity-20"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent"></div>
+          
+          <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+            <div className="space-y-8">
+              {/* Ícone de usuário grande */}
+              <div className="mx-auto w-24 h-24 bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
+                <User className="h-12 w-12 text-ocean-300" />
+              </div>
+              
+              {/* Título e descrição */}
+              <div className="space-y-4">
+                <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
+                  Acesso Restrito
+                </h1>
+                <p className="text-xl text-ocean-100 max-w-2xl mx-auto">
+                  Você precisa estar logado para acessar seu perfil e gerenciar suas sessões de surf.
+                </p>
+              </div>
+              
+              {/* Card com informações */}
+              <div className="max-w-md mx-auto">
+                <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center text-ocean-200">
+                        <Waves className="h-5 w-5 mr-3 text-ocean-300" />
+                        <span>Registre suas sessões de surf</span>
+                      </div>
+                      <div className="flex items-center text-ocean-200">
+                        <TrendingUp className="h-5 w-5 mr-3 text-ocean-300" />
+                        <span>Acompanhe seu progresso</span>
+                      </div>
+                      <div className="flex items-center text-ocean-200">
+                        <MapPin className="h-5 w-5 mr-3 text-ocean-300" />
+                        <span>Receba recomendações personalizadas</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Botões de ação */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  size="lg" 
+                  className="bg-white text-ocean-900 hover:bg-ocean-50 text-lg px-8 py-4 font-semibold"
+                  onClick={() => window.location.href = '/account'}
+                >
+                  Fazer Login
+                  <User className="ml-2 h-5 w-5" />
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="border-white text-white bg-transparent hover:bg-white/10 text-lg px-8 py-4 font-semibold"
+                  onClick={() => window.location.href = '/'}
+                >
+                  Voltar ao Início
+                </Button>
+              </div>
+              
+              {/* Estatísticas motivacionais */}
+              <div className="flex items-center justify-center space-x-8 text-ocean-200 pt-8">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">500+</div>
+                  <div className="text-sm">Surfistas Ativos</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">2.5k+</div>
+                  <div className="text-sm">Sessões Registradas</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">95%</div>
+                  <div className="text-sm">Satisfação</div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
     );
   }
@@ -549,44 +673,117 @@ const Profile = () => {
             {/* Progress Chart */}
             <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
               <CardHeader>
-                <CardTitle className="flex items-center text-white">
-                  <TrendingUp className="h-5 w-5 mr-2 text-ocean-200" />
-                  Progresso nos Últimos Meses
-                </CardTitle>
-                <CardDescription className="text-ocean-100">
-                  Número de sessões e avaliação média
-                </CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="flex items-center text-white">
+                      <TrendingUp className="h-5 w-5 mr-2 text-ocean-200" />
+                      Progresso no Surf
+                    </CardTitle>
+                    <CardDescription className="text-ocean-100">
+                      Sessões e avaliações por período
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Label className="text-ocean-100 text-sm font-medium hidden sm:block">Período:</Label>
+                    <Select value={progressFilter} onValueChange={(value: 'all' | 'year' | 'month') => setProgressFilter(value)}>
+                      <SelectTrigger className="w-32 bg-ocean-700/30 border-ocean-600/30 text-white hover:bg-ocean-600/30 transition-colors">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
+                          <span className="flex items-center">
+                            📊 Tudo
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="year">
+                          <span className="flex items-center">
+                            📅 Último Ano
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="month">
+                          <span className="flex items-center">
+                            📋 Último Mês
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {/* Indicadores do filtro ativo */}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Badge variant="outline" className="bg-ocean-700/30 text-ocean-100 border-ocean-600/30">
+                    {progressFilter === 'all' && `${progressData.length} períodos total`}
+                    {progressFilter === 'year' && `${progressData.length} meses no último ano`}
+                    {progressFilter === 'month' && `${progressData.length} semanas no último mês`}
+                  </Badge>
+                  {progressData.length > 0 && (
+                    <Badge variant="outline" className="bg-green-700/30 text-green-100 border-green-600/30">
+                      {progressData.reduce((sum, item) => sum + item.sessions, 0)} sessões
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={progressData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(186,230,253,0.2)" />
-                    <XAxis dataKey="month" tick={{ fill: '#bae6fd' }} />
-                    <YAxis tick={{ fill: '#bae6fd' }} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(12,74,110,0.9)', 
-                        border: '1px solid rgba(186,230,253,0.3)', 
-                        borderRadius: '8px',
-                        color: '#fff'
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="sessions" 
-                      stroke="#bae6fd" 
-                      strokeWidth={2}
-                      name="Sessões"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="avgRating" 
-                      stroke="#fde047" 
-                      strokeWidth={2}
-                      name="Avaliação Média"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {progressData.length > 0 ? (
+                  <div className="w-full">
+                    <ResponsiveContainer width="100%" height={350}>
+                      <LineChart data={progressData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(186,230,253,0.2)" />
+                        <XAxis 
+                          dataKey="period" 
+                          tick={{ fill: '#bae6fd', fontSize: 12 }}
+                          angle={progressData.length > 6 ? -45 : 0}
+                          textAnchor={progressData.length > 6 ? 'end' : 'middle'}
+                          height={progressData.length > 6 ? 80 : 60}
+                        />
+                        <YAxis tick={{ fill: '#bae6fd', fontSize: 12 }} />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'rgba(12,74,110,0.95)', 
+                            border: '1px solid rgba(186,230,253,0.3)', 
+                            borderRadius: '12px',
+                            color: '#fff',
+                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
+                          }}
+                          labelStyle={{ color: '#bae6fd', fontWeight: 'bold' }}
+                          formatter={(value, name) => [
+                            `${value}${name === 'avgRating' ? ' ★' : ''}`,
+                            name === 'sessions' ? 'Sessões' : 'Avaliação Média'
+                          ]}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="sessions" 
+                          stroke="#bae6fd" 
+                          strokeWidth={3}
+                          name="Sessões"
+                          dot={{ fill: '#bae6fd', strokeWidth: 2, r: 5 }}
+                          activeDot={{ r: 7, stroke: '#bae6fd', strokeWidth: 2, fill: '#0369a1' }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="avgRating" 
+                          stroke="#fde047" 
+                          strokeWidth={3}
+                          name="Avaliação Média"
+                          dot={{ fill: '#fde047', strokeWidth: 2, r: 5 }}
+                          activeDot={{ r: 7, stroke: '#fde047', strokeWidth: 2, fill: '#eab308' }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <TrendingUp className="h-16 w-16 text-ocean-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-white mb-2">Nenhum dado no período</h3>
+                    <p className="text-ocean-200 max-w-md mx-auto">
+                      {progressFilter === 'month' && 'Nenhuma sessão no último mês.'}
+                      {progressFilter === 'year' && 'Nenhuma sessão no último ano.'}
+                      {progressFilter === 'all' && 'Adicione suas primeiras sessões para ver o gráfico de progresso.'}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -603,104 +800,178 @@ const Profile = () => {
               </CardHeader>
               <CardContent>
                 {/* Formulário para adicionar nova sessão */}
-                <div className="mb-6 border border-ocean-600/30 rounded-lg p-4 bg-ocean-700/20">
-                  <div className="flex flex-wrap gap-4 items-end">
+                <div className="mb-6 border border-ocean-600/30 rounded-lg p-6 bg-ocean-700/20">
+                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <Calendar className="h-5 w-5 mr-2 text-ocean-300" />
+                    Nova Sessão de Surf
+                  </h4>
+                  
+                  {/* Primeira linha: Data, Local, Duração */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
-                      <Label htmlFor="date" className="text-ocean-100">Data</Label>
+                      <Label htmlFor="date" className="text-ocean-100 text-sm font-medium">Data</Label>
                       <Input
                         id="date"
                         type="date"
                         value={newSession.date}
                         onChange={e => setNewSession({ ...newSession, date: e.target.value })}
-                        className="w-32 cursor-pointer bg-ocean-700/30 border-ocean-600/30 text-white"
+                        className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white cursor-pointer"
                         onClick={(e) => e.currentTarget.showPicker?.()}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="location" className="text-ocean-100">Local</Label>
+                      <Label htmlFor="location" className="text-ocean-100 text-sm font-medium">Local</Label>
                       <Select
                         value={newSession.location}
                         onValueChange={v => setNewSession({ ...newSession, location: v })}
                       >
-                        <SelectTrigger className="w-40 bg-ocean-700/30 border-ocean-600/30 text-white">
-                          <SelectValue placeholder="Escolha..." />
+                        <SelectTrigger className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white">
+                          <SelectValue placeholder="Escolha o local..." />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Paiva">Praia do Paiva</SelectItem>
                           <SelectItem value="Porto de Galinhas">Porto de Galinhas</SelectItem>
                           <SelectItem value="Cupe">Praia do Cupe</SelectItem>
                           <SelectItem value="Maracaípe">Praia de Maracaípe</SelectItem>
+                          <SelectItem value="Carneiros">Praia dos Carneiros</SelectItem>
+                          <SelectItem value="Muro Alto">Muro Alto</SelectItem>
                           <SelectItem value="Outro">Outro</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="duration" className="text-ocean-100">Duração</Label>
+                      <Label htmlFor="duration" className="text-ocean-100 text-sm font-medium">Duração</Label>
                       <Select
                         value={newSession.duration}
                         onValueChange={v => setNewSession({ ...newSession, duration: v })}
                       >
-                        <SelectTrigger className="w-24 bg-ocean-700/30 border-ocean-600/30 text-white">
+                        <SelectTrigger className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white">
                           <SelectValue placeholder="Tempo" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="30min">30min</SelectItem>
                           <SelectItem value="1h">1h</SelectItem>
+                          <SelectItem value="1h 30min">1h 30min</SelectItem>
                           <SelectItem value="2h">2h</SelectItem>
+                          <SelectItem value="2h 30min">2h 30min</SelectItem>
                           <SelectItem value="3h">3h</SelectItem>
                           <SelectItem value="4h">4h</SelectItem>
-                          <SelectItem value="5h">5h</SelectItem>
-                          <SelectItem value="6h">6h</SelectItem>
+                          <SelectItem value="5h+">5h+</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+
+                  {/* Segunda linha: Ondas, Nota */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                      <Label htmlFor="waves" className="text-ocean-100">Ondas</Label>
+                      <Label htmlFor="waves" className="text-ocean-100 text-sm font-medium">Altura das Ondas</Label>
                       <Select
                         value={newSession.waves}
                         onValueChange={v => setNewSession({ ...newSession, waves: v })}
                       >
-                        <SelectTrigger className="w-24 bg-ocean-700/30 border-ocean-600/30 text-white">
-                          <SelectValue placeholder="Altura" />
+                        <SelectTrigger className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white">
+                          <SelectValue placeholder="Tamanho das ondas" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="0.5m">0.5m</SelectItem>
-                          <SelectItem value="1.0m">1.0m</SelectItem>
-                          <SelectItem value="1.5m">1.5m</SelectItem>
-                          <SelectItem value="2.0m">2.0m</SelectItem>
-                          <SelectItem value="2.5m">2.5m</SelectItem>
-                          <SelectItem value="3.0m">3.0m</SelectItem>
-                          <SelectItem value="3.0m+">3.0m+</SelectItem>
+                          <SelectItem value="0.5m">0.5m - Pequenas</SelectItem>
+                          <SelectItem value="1.0m">1.0m - Médias</SelectItem>
+                          <SelectItem value="1.5m">1.5m - Boas</SelectItem>
+                          <SelectItem value="2.0m">2.0m - Grandes</SelectItem>
+                          <SelectItem value="2.5m">2.5m - Muito grandes</SelectItem>
+                          <SelectItem value="3.0m">3.0m - Enormes</SelectItem>
+                          <SelectItem value="3.0m+">3.0m+ - Gigantes</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="rating" className="text-ocean-100">Nota</Label>
+                      <Label htmlFor="rating" className="text-ocean-100 text-sm font-medium">Avaliação da Sessão</Label>
                       <Select
                         value={String(newSession.rating)}
                         onValueChange={v => setNewSession({ ...newSession, rating: Number(v) })}
                       >
-                        <SelectTrigger className="w-20 bg-ocean-700/30 border-ocean-600/30 text-white">
-                          <SelectValue placeholder="Nota" />
+                        <SelectTrigger className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white">
+                          <SelectValue placeholder="Nota da sessão" />
                         </SelectTrigger>
                         <SelectContent>
-                          {[1,2,3,4,5].map(n => (
-                            <SelectItem key={n} value={String(n)}>{n}★</SelectItem>
-                          ))}
+                          <SelectItem value="1">1★ - Muito ruim</SelectItem>
+                          <SelectItem value="2">2★ - Ruim</SelectItem>
+                          <SelectItem value="3">3★ - Ok</SelectItem>
+                          <SelectItem value="4">4★ - Boa</SelectItem>
+                          <SelectItem value="5">5★ - Excelente</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex-1">
-                      <Label htmlFor="notes" className="text-ocean-100">Notas</Label>
-                      <Input
-                        id="notes"
-                        type="text"
-                        value={newSession.notes}
-                        onChange={e => setNewSession({ ...newSession, notes: e.target.value })}
-                        className="bg-ocean-700/30 border-ocean-600/30 text-white placeholder:text-ocean-200"
-                      />
+                  </div>
+
+                  {/* Terceira linha: Notas (campo maior) */}
+                  <div className="mb-6">
+                    <Label htmlFor="notes" className="text-ocean-100 text-sm font-medium mb-2 block">
+                      Notas e Observações
+                      <span className="text-ocean-300 text-xs ml-2">(opcional)</span>
+                    </Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Ex: Ondas perfeitas pela manhã, vento offshore, maré cheia. Pratiquei backside e consegui algumas boas ondas. Prancha 6'2 funcionou bem."
+                      value={newSession.notes}
+                      onChange={e => {
+                        const value = e.target.value;
+                        if (value.length <= 500) {
+                          setNewSession({ ...newSession, notes: value });
+                        }
+                      }}
+                      className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white placeholder:text-ocean-200/70 min-h-[100px] resize-y focus:ring-2 focus:ring-ocean-400 transition-all duration-200"
+                      rows={4}
+                    />
+                    <div className="flex justify-between mt-1">
+                      <span className="text-xs text-ocean-300">
+                        Dica: Descreva condições do mar, vento, maré, equipamentos e manobras
+                      </span>
+                      <span className={`text-xs transition-colors ${
+                        newSession.notes.length > 450 
+                          ? 'text-amber-300' 
+                          : newSession.notes.length > 480 
+                          ? 'text-orange-300' 
+                          : 'text-ocean-300'
+                      }`}>
+                        {newSession.notes.length}/500
+                      </span>
                     </div>
-                    <Button className="bg-ocean-gradient text-white mt-2" onClick={handleAddSession}>
-                      Adicionar
+                  </div>
+
+                  {/* Status de validação */}
+                  {(!newSession.date || !newSession.location || !newSession.duration || !newSession.waves) && (
+                    <div className="mb-4 p-3 bg-amber-900/20 border border-amber-600/30 rounded-lg">
+                      <p className="text-sm text-amber-200 flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Preencha os campos obrigatórios: Data, Local, Duração e Altura das Ondas
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Botões */}
+                  <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                    <Button 
+                      variant="outline"
+                      className="border-ocean-600/30 text-ocean-200 bg-transparent hover:bg-ocean-700/30 transition-all duration-200"
+                      onClick={() => setNewSession({
+                        date: new Date().toISOString().split('T')[0],
+                        location: '',
+                        duration: '',
+                        waves: '',
+                        rating: 3,
+                        notes: ''
+                      })}
+                    >
+                      Limpar Formulário
+                    </Button>
+                    <Button 
+                      className="bg-ocean-gradient text-white hover:opacity-90 px-6 py-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
+                      onClick={handleAddSession}
+                      disabled={!newSession.date || !newSession.location || !newSession.duration || !newSession.waves}
+                    >
+                      <Waves className="h-4 w-4 mr-2" />
+                      Adicionar Sessão
                     </Button>
                   </div>
                 </div>
