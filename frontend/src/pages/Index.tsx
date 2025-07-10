@@ -151,98 +151,6 @@ function useCountUp(to: number, duration = 1800, suffix = '', isPercent = false)
   return `${value}${suffix}`;
 }
 
-// Componente para efeito de digitação com animação de onda
-const TypewriterEffect = ({ phrases, typingSpeed = 80, deletingSpeed = 50, pauseTime = 1500 }) => {
-  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
-  const [currentText, setCurrentText] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  useEffect(() => {
-    const currentPhrase = phrases[currentPhraseIndex];
-    
-    const timeout = setTimeout(() => {
-      if (!isDeleting) {
-        // Digitando
-        if (currentText.length < currentPhrase.length) {
-          setCurrentText(currentPhrase.slice(0, currentText.length + 1));
-        } else {
-          // Terminou de digitar, pausa e depois começa a apagar
-          setTimeout(() => setIsDeleting(true), pauseTime);
-        }
-      } else {
-        // Apagando
-        if (currentText.length > 0) {
-          setCurrentText(currentText.slice(0, -1));
-        } else {
-          // Terminou de apagar, vai para próxima frase
-          setIsDeleting(false);
-          setCurrentPhraseIndex((prevIndex) => (prevIndex + 1) % phrases.length);
-        }
-      }
-    }, isDeleting ? deletingSpeed : typingSpeed);
-
-    return () => clearTimeout(timeout);
-  }, [currentText, isDeleting, currentPhraseIndex, phrases, typingSpeed, deletingSpeed, pauseTime]);
-
-  return (
-    <span className="relative inline-block">
-      {currentText}
-      {/* Animação de onda fluida */}
-      <span className="inline-block ml-2 relative">
-        <svg 
-          width="35" 
-          height="24" 
-          viewBox="0 0 35 24" 
-          className="inline-block align-middle"
-        >
-          <defs>
-            <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#bae6fd" stopOpacity="0.4" />
-              <stop offset="50%" stopColor="#87ceeb" stopOpacity="1" />
-              <stop offset="100%" stopColor="#bae6fd" stopOpacity="0.4" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M3,12 Q8,6 13,12 T23,12 T33,12"
-            stroke="url(#waveGradient)"
-            strokeWidth="2.5"
-            fill="none"
-            strokeLinecap="round"
-            className={`transition-all duration-500 ${
-              isDeleting ? 'animate-wave-reverse' : 'animate-wave-flow'
-            }`}
-          />
-          {/* Pontos de brilho para dar mais dinamismo */}
-          <circle
-            cx="8"
-            cy="8"
-            r="1.5"
-            fill="#87ceeb"
-            className={`${isDeleting ? 'animate-bounce' : 'animate-pulse'}`}
-            opacity="0.8"
-          />
-          <circle
-            cx="18"
-            cy="16"
-            r="1"
-            fill="#bae6fd"
-            className={`${isDeleting ? 'animate-pulse' : 'animate-bounce'}`}
-            opacity="0.6"
-          />
-          <circle
-            cx="28"
-            cy="8"
-            r="1.2"
-            fill="#87ceeb"
-            className={`${isDeleting ? 'animate-bounce' : 'animate-pulse'}`}
-            opacity="0.7"
-          />
-        </svg>
-      </span>
-    </span>
-  );
-};
-
 const Index = () => {
   const [selectedBeach, setSelectedBeach] = useState(beaches[0].id);
   const [nearbyBeaches, setNearbyBeaches] = useState(beaches);
@@ -267,15 +175,6 @@ const Index = () => {
     setBalloonHovered(open || balloonHovered);
   };
 
-  // Frases para o efeito de digitação
-  const phrases = [
-    "Previsões de Ondas",
-    "Swells Encontrados",
-    "Surfe as Melhores Ondas", 
-    "Condições Perfeitas",
-    "Ondas Ideais para Você"
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -297,7 +196,58 @@ const Index = () => {
             <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
               <div className="space-y-3 sm:space-y-4" data-aos="fade-right" data-aos-delay="200">
                 <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-                  <TypewriterEffect phrases={phrases} />
+                  <span className="relative inline-block">
+                    Ondas Perfeitas
+                    {/* Animação de onda fluida */}
+                    <span className="inline-block ml-2 relative">
+                      <svg 
+                        width="35" 
+                        height="24" 
+                        viewBox="0 0 35 24" 
+                        className="inline-block align-middle"
+                      >
+                        <defs>
+                          <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#87ceeb" />
+                            <stop offset="50%" stopColor="#bae6fd" />
+                            <stop offset="100%" stopColor="#87ceeb" />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          d="M3,12 Q8,6 13,12 T23,12 T33,12"
+                          stroke="url(#waveGradient)"
+                          strokeWidth="2.5"
+                          fill="none"
+                          strokeLinecap="round"
+                          className="animate-wave-flow"
+                        />
+                        <circle
+                          cx="8"
+                          cy="8"
+                          r="1.5"
+                          fill="#87ceeb"
+                          className="animate-pulse"
+                          opacity="0.8"
+                        />
+                        <circle
+                          cx="18"
+                          cy="16"
+                          r="1"
+                          fill="#bae6fd"
+                          className="animate-bounce"
+                          opacity="0.6"
+                        />
+                        <circle
+                          cx="28"
+                          cy="8"
+                          r="1.2"
+                          fill="#87ceeb"
+                          className="animate-pulse"
+                          opacity="0.7"
+                        />
+                      </svg>
+                    </span>
+                  </span>
                   <span className="block text-ocean-200">Baseadas em IA</span>
                 </h1>
                 <p className="text-lg sm:text-xl text-ocean-100 max-w-lg mx-auto lg:mx-0">

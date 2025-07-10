@@ -105,8 +105,8 @@ const About = () => {
                 </div>
                 <p className="text-ocean-100 leading-relaxed text-sm sm:text-base">
                   Desenvolvedor full-stack apaixonado por tecnologia e surf. Com mais de 3 anos de experiência 
-                  em desenvolvimento de software e 2 anos surfando, decidiu combinar suas duas paixões para 
-                  criar a DeepSurf. Especialista em machine learning e análise de dados meteorológicos.
+                  em desenvolvimento de software e 2 anos surfando, decidi combinar essas duas paixões para 
+                  criar o DeepSurf. Especialista em machine learning e análise de dados meteorológicos.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 sm:gap-4">
                   <Button 

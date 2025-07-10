@@ -238,7 +238,10 @@ const Map = () => {
     dragStart.current = { x: touch.clientX, y: touch.clientY };
     offsetStart.current = { ...offset };
     // Prevenir scroll da página durante touch
+    e.preventDefault();
     document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -280,6 +283,9 @@ const Map = () => {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length !== 1) return;
     const touch = e.touches[0];
+    
+    // Prevenir comportamento padrão do touch para evitar scroll
+    e.preventDefault();
     
     if (editMode && draggingPin) {
       // Arrastar pin dentro do SVG via touch
@@ -325,6 +331,8 @@ const Map = () => {
     setDragging(false);
     // Restaurar scroll da página
     document.body.style.overflow = 'auto';
+    document.body.style.position = 'static';
+    document.body.style.width = 'auto';
   };
 
   // Função para lidar com arrastar pins
@@ -411,13 +419,18 @@ const Map = () => {
               <CardContent className="h-[calc(100%-90px)] p-2 sm:p-4">
                 <div
                   className="relative w-full h-full flex items-center justify-center select-none overflow-hidden rounded-lg bg-gradient-to-br from-slate-700 to-slate-800"
-                  style={{ cursor: dragging ? 'grabbing' : editMode ? 'crosshair' : 'grab' }}
+                  style={{ 
+                    cursor: dragging ? 'grabbing' : editMode ? 'crosshair' : 'grab',
+                    touchAction: 'none' // Importante para mobile
+                  }}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={() => {
                     handleMouseUp();
                     document.body.style.overflow = 'auto';
+                    document.body.style.position = 'static';
+                    document.body.style.width = 'auto';
                   }}
                   onWheel={e => {
                     e.preventDefault();

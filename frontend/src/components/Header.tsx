@@ -74,7 +74,7 @@ const Header = () => {
                   alt="DeepSurf Logo" 
                   className="h-10 w-10"
                 />
-                <span className="text-2xl font-bold bg-ocean-gradient bg-clip-text text-transparent">
+                <span className="text-2xl font-bold text-ocean-200">
                   DeepSurf
                 </span>
               </div>
@@ -289,39 +289,10 @@ const Header = () => {
     );
   }
 
-  // Header especial para página inicial (mantém a animação original)
+  // Header especial para página inicial (navbar fixa simples)
   return (
-    <nav className="fixed z-50 w-full px-0 transition-transform duration-300 ease-in-out">
-      <motion.div
-        className={`mx-auto
-          ${isScrolled
-            ? "mt-2 rounded-2xl border border-gray-700/30 bg-gray-800/60 shadow-lg backdrop-blur-xl"
-            : "bg-gray-800/50 backdrop-blur-md shadow-sm"
-          }`}
-        initial={false}
-        animate={
-          isScrolled
-            ? {
-                maxWidth: 'calc(100vw - 90px)',
-                borderRadius: 16,
-                marginTop: 8,
-                paddingLeft: 16,
-                paddingRight: 16
-              }
-            : {
-                maxWidth: '100vw',
-                borderRadius: 0,
-                marginTop: 0,
-                paddingLeft: 0,
-                paddingRight: 0
-              }
-        }
-        transition={{
-          duration: 0.7,
-          ease: [0.4, 0, 0.2, 1]
-        }}
-        style={{ overflow: 'visible' }}
-      >
+    <nav className="fixed z-50 w-full">
+      <div className="bg-gray-800/90 backdrop-blur-md shadow-lg border-b border-gray-600/20">
         <header className="border-b border-gray-600/20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
@@ -332,7 +303,7 @@ const Header = () => {
                   alt="DeepSurf Logo" 
                   className="h-10 w-10"
                 />
-                <span className="text-2xl font-bold bg-ocean-gradient bg-clip-text text-transparent">
+                <span className="text-2xl font-bold text-ocean-200">
                   DeepSurf
                 </span>
               </div>
@@ -543,7 +514,7 @@ const Header = () => {
             </Dialog>
           </div>
         </header>
-      </motion.div>
+      </div>
     </nav>
   );
 };
