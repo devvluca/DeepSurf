@@ -190,6 +190,13 @@ const Map = () => {
     }
   }, [pinPositions]);
 
+  // UseEffect para garantir que o scroll seja restaurado ao desmontar o componente
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
+
   // Adicionar pin no centro do mapa
   const addPin = (beachName: string) => {
     const newPin = { x: 0.5, y: 0.5 }; // Centro do mapa
@@ -216,12 +223,22 @@ const Map = () => {
   // Praias que ainda não têm pins
   const availableBeaches = beaches.filter(beach => !pinPositions[beach.name]);
 
-  // Mouse events for pan
+  // Mouse/Touch events for pan
   const handleMouseDown = (e: React.MouseEvent) => {
     if (editMode) return;
     setDragging(true);
     dragStart.current = { x: e.clientX, y: e.clientY };
     offsetStart.current = { ...offset };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (editMode || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setDragging(true);
+    dragStart.current = { x: touch.clientX, y: touch.clientY };
+    offsetStart.current = { ...offset };
+    // Prevenir scroll da página durante touch
+    document.body.style.overflow = 'hidden';
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -240,21 +257,56 @@ const Map = () => {
       const svgY = (mouseY - containerHeight/2 - offset.y) / zoom + containerHeight/2;
       
       // Converter para percentual do viewBox SVG
-      const percentX = svgX / containerWidth;
-      const percentY = svgY / containerHeight;
+      const percentX = Math.max(0, Math.min(1, svgX / containerWidth));
+      const percentY = Math.max(0, Math.min(1, svgY / containerHeight));
       
       setTempPinPositions(prev => ({
         ...prev,
         [draggingPin]: { x: percentX, y: percentY }
       }));
       
-      console.log(`Pin "${draggingPin}" movido para:`, { x: percentX, y: percentY });
       return;
     }
     
     if (!dragging || editMode) return;
     const dx = e.clientX - (dragStart.current?.x || 0);
     const dy = e.clientY - (dragStart.current?.y || 0);
+    setOffset({
+      x: offsetStart.current.x + dx,
+      y: offsetStart.current.y + dy,
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    
+    if (editMode && draggingPin) {
+      // Arrastar pin dentro do SVG via touch
+      const rect = e.currentTarget.getBoundingClientRect();
+      const containerWidth = rect.width;
+      const containerHeight = rect.height;
+      
+      const touchX = touch.clientX - rect.left;
+      const touchY = touch.clientY - rect.top;
+      
+      const svgX = (touchX - containerWidth/2 - offset.x) / zoom + containerWidth/2;
+      const svgY = (touchY - containerHeight/2 - offset.y) / zoom + containerHeight/2;
+      
+      const percentX = Math.max(0, Math.min(1, svgX / containerWidth));
+      const percentY = Math.max(0, Math.min(1, svgY / containerHeight));
+      
+      setTempPinPositions(prev => ({
+        ...prev,
+        [draggingPin]: { x: percentX, y: percentY }
+      }));
+      
+      return;
+    }
+    
+    if (!dragging || editMode) return;
+    const dx = touch.clientX - (dragStart.current?.x || 0);
+    const dy = touch.clientY - (dragStart.current?.y || 0);
     setOffset({
       x: offsetStart.current.x + dx,
       y: offsetStart.current.y + dy,
@@ -268,10 +320,11 @@ const Map = () => {
         ...prev,
         ...tempPinPositions
       }));
-      console.log('Coordenadas finais de todos os pins salvos:', tempPinPositions);
       setDraggingPin(null);
     }
     setDragging(false);
+    // Restaurar scroll da página
+    document.body.style.overflow = 'auto';
   };
 
   // Função para lidar com arrastar pins
@@ -280,7 +333,13 @@ const Map = () => {
     e.preventDefault();
     e.stopPropagation();
     setDraggingPin(beachName);
-    console.log(`Começou a arrastar: ${beachName}`);
+  };
+
+  const handlePinTouchStart = (e: React.TouchEvent, beachName: string) => {
+    if (!editMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingPin(beachName);
   };
 
   // Helper para converter classes Tailwind para cores hex
@@ -301,36 +360,62 @@ const Map = () => {
       <Header />
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-4 sm:mb-6 lg:mb-8">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
             Mapa de Ondas
           </h1>
-          <p className="text-base sm:text-lg text-ocean-100">
+          <p className="text-base sm:text-lg text-slate-200">
             Visualize condições de surf em tempo real nas melhores praias
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {/* Map Area */}
-          <div className="lg:col-span-2 order-1">
-            <Card className="h-[400px] sm:h-[500px] lg:h-[600px] bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
-              <CardHeader className="pb-2 sm:pb-6">
-                <CardTitle className="flex items-center text-slate-100 text-base sm:text-lg">
-                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-300" />
-                  Mapa Interativo
-                </CardTitle>
-                <CardDescription className="text-slate-300 text-sm sm:text-base">
-                  Clique nos marcadores para ver detalhes das condições
-                </CardDescription>
+        {/* Layout Mobile-first: Stack em mobile, lado a lado em desktop */}
+        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+          {/* Map Area - Ocupa toda largura em mobile */}
+          <div className="lg:col-span-2 order-1 lg:order-1">
+            <Card className="h-[60vh] sm:h-[70vh] lg:h-[80vh] bg-slate-800/80 backdrop-blur-sm border-slate-600/40 shadow-2xl">
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="flex items-center text-white text-lg sm:text-xl">
+                      <MapPin className="h-5 w-5 mr-2 text-emerald-400" />
+                      Mapa Interativo
+                    </CardTitle>
+                    <CardDescription className="text-slate-300 text-sm hidden sm:block">
+                      Toque nos marcadores para ver detalhes das condições
+                    </CardDescription>
+                  </div>
+                  
+                  {/* Controles mobile na header */}
+                  <div className="flex items-center gap-2 sm:hidden">
+                    <Button 
+                      size="sm" 
+                      variant={editMode ? "destructive" : "outline"}
+                      className={editMode ? "bg-red-600 text-white border-red-500" : "bg-slate-700 border-slate-600 text-slate-200"}
+                      onClick={() => setEditMode(!editMode)}
+                    >
+                      {editMode ? "✓ Sair" : "✎ Editar"}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="bg-slate-700 border-slate-600 text-slate-200"
+                      onClick={() => setShowAddPin(!showAddPin)}
+                    >
+                      📍 Add
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="h-full p-2 sm:p-6">
+              
+              <CardContent className="h-[calc(100%-90px)] p-2 sm:p-4">
                 <div
-                  className="relative w-full h-[300px] sm:h-[400px] lg:h-[500px] flex items-center justify-center select-none overflow-hidden"
+                  className="relative w-full h-full flex items-center justify-center select-none overflow-hidden rounded-lg bg-gradient-to-br from-slate-700 to-slate-800"
                   style={{ cursor: dragging ? 'grabbing' : editMode ? 'crosshair' : 'grab' }}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
-                  onMouseLeave={e => {
+                  onMouseLeave={() => {
                     handleMouseUp();
                     document.body.style.overflow = 'auto';
                   }}
@@ -341,14 +426,26 @@ const Map = () => {
                     newZoom = Math.max(0.5, Math.min(2.5, newZoom));
                     setZoom(newZoom);
                   }}
+                  // Touch events para mobile
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleMouseUp}
+                  // Controle de scroll da página
                   onMouseEnter={() => {
                     document.body.style.overflow = 'hidden';
                   }}
                 >
                   {/* Notificação de salvamento */}
                   {saveNotification && (
-                    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-green-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg z-30 animate-bounce">
+                    <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-emerald-600/90 backdrop-blur-sm text-white px-3 py-2 rounded-lg shadow-lg z-30 text-sm animate-fade-in">
                       {saveNotification}
+                    </div>
+                  )}
+
+                  {/* Indicador de modo de edição */}
+                  {editMode && (
+                    <div className="absolute top-12 left-1/2 transform -translate-x-1/2 bg-amber-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg z-30 text-sm animate-pulse">
+                      ✎ Modo Edição: Arraste os pins para reposicioná-los
                     </div>
                   )}
 
@@ -360,16 +457,16 @@ const Map = () => {
                     draggable={false}
                     style={{
                       transform: `translate(${offset.x}px,${offset.y}px) scale(${zoom})`,
-                      transition: dragging ? 'none' : 'transform 0.1s',
+                      transition: dragging ? 'none' : 'transform 0.1s ease-out',
                     }}
                   />
 
-                  {/* SVG OVERLAY para pins - aplica EXATAMENTE a mesma transformação */}
+                  {/* SVG OVERLAY para pins */}
                   <svg
                     className="absolute inset-0 w-full h-full pointer-events-none"
                     style={{
                       transform: `translate(${offset.x}px,${offset.y}px) scale(${zoom})`,
-                      transition: dragging ? 'none' : 'transform 0.1s',
+                      transition: dragging ? 'none' : 'transform 0.1s ease-out',
                     }}
                     viewBox="0 0 500 500"
                     preserveAspectRatio="xMidYMid meet"
@@ -379,7 +476,7 @@ const Map = () => {
                       .filter(beach => tempPinPositions[beach.name])
                       .map((beach) => {
                         const pos = tempPinPositions[beach.name];
-                        const x = pos.x * 500; // Coordenadas do viewBox
+                        const x = pos.x * 500;
                         const y = pos.y * 500;
                         
                         return (
@@ -388,16 +485,17 @@ const Map = () => {
                             <circle
                               cx={x}
                               cy={y}
-                              r={editMode ? "15" : "12"}
+                              r={editMode ? "18" : "14"}
                               className={`cursor-pointer transition-all ${
-                                editMode ? 'stroke-red-500 stroke-4' : 'stroke-white stroke-2'
+                                editMode ? 'stroke-red-400 stroke-4' : 'stroke-white stroke-2'
                               }`}
                               fill={getColorFromClass(beach.color)}
                               style={{ 
                                 pointerEvents: 'auto',
-                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                                filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.4))'
                               }}
                               onMouseDown={(e) => editMode ? handlePinMouseDown(e as any, beach.name) : undefined}
+                              onTouchStart={(e) => editMode ? handlePinTouchStart(e, beach.name) : undefined}
                               onClick={(e) => {
                                 if (!editMode) {
                                   setSelectedBeach(beach.id);
@@ -412,28 +510,28 @@ const Map = () => {
                               y={y + 2}
                               textAnchor="middle"
                               className="text-xs font-bold fill-white pointer-events-none select-none"
-                              style={{ fontSize: '10px' }}
+                              style={{ fontSize: editMode ? '12px' : '10px' }}
                             >
                               {beach.surfability}★
                             </text>
-                            {/* Tooltip on hover (só se não estiver editando) */}
+                            {/* Tooltip on hover - só desktop */}
                             {!editMode && (
-                              <g className="opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
+                              <g className="opacity-0 hover:opacity-100 transition-opacity pointer-events-none hidden sm:block">
                                 <rect
-                                  x={x - 40}
-                                  y={y - 35}
-                                  width="80"
-                                  height="20"
-                                  rx="4"
-                                  fill="white"
-                                  stroke="#ccc"
+                                  x={x - 50}
+                                  y={y - 40}
+                                  width="100"
+                                  height="25"
+                                  rx="6"
+                                  fill="rgba(0,0,0,0.8)"
+                                  stroke="rgba(255,255,255,0.3)"
                                 />
                                 <text
                                   x={x}
                                   y={y - 22}
                                   textAnchor="middle"
-                                  className="text-xs fill-gray-800"
-                                  style={{ fontSize: '9px' }}
+                                  className="text-xs fill-white"
+                                  style={{ fontSize: '10px' }}
                                 >
                                   {beach.name}
                                 </text>
@@ -444,38 +542,42 @@ const Map = () => {
                       })}
                   </svg>
 
-                  {/* Zoom controls */}
-                  <div className="absolute top-2 sm:top-4 right-2 sm:right-4 flex flex-col gap-1 sm:gap-2 z-10">
-                    <Button size="sm" variant="outline" className="bg-ocean-800/60 border-ocean-600/50 text-white hover:bg-ocean-700/80 h-8 w-8 sm:h-10 sm:w-10 text-sm sm:text-base" onClick={() => setZoom(z => Math.min(z + 0.2, 2.5))}>+</Button>
-                    <Button size="sm" variant="outline" className="bg-ocean-800/60 border-ocean-600/50 text-white hover:bg-ocean-700/80 h-8 w-8 sm:h-10 sm:w-10 text-sm sm:text-base" onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))}>-</Button>
-                    {/* Botão para modo de edição */}
+                  {/* Zoom controls - Apenas desktop */}
+                  <div className="absolute top-4 right-4 hidden sm:flex flex-col gap-2 z-10">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="bg-slate-800/80 border-slate-600/50 text-white hover:bg-slate-700/90 h-10 w-10" 
+                      onClick={() => setZoom(z => Math.min(z + 0.2, 2.5))}
+                    >
+                      +
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="bg-slate-800/80 border-slate-600/50 text-white hover:bg-slate-700/90 h-10 w-10" 
+                      onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))}
+                    >
+                      -
+                    </Button>
                     <Button 
                       size="sm" 
                       variant={editMode ? "destructive" : "outline"}
-                      className={editMode ? "h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm" : "bg-ocean-800/60 border-ocean-600/50 text-white hover:bg-ocean-700/80 h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm"}
-                      onClick={() => {
-                        setEditMode(!editMode);
-                        if (!editMode) {
-                          console.log('Modo de edição ativado - você pode arrastar os pins agora!');
-                        } else {
-                          console.log('Modo de edição desativado');
-                        }
-                      }}
+                      className={editMode ? "h-10 w-10" : "bg-slate-800/80 border-slate-600/50 text-white hover:bg-slate-700/90 h-10 w-10"}
+                      onClick={() => setEditMode(!editMode)}
                       title={editMode ? "Sair do modo edição" : "Modo edição: mover pins"}
                     >
                       {editMode ? "✓" : "✎"}
                     </Button>
-                    {/* Botão para limpar todos os pins */}
                     <Button 
                       size="sm" 
                       variant="outline"
-                      className="bg-red-600/60 border-red-500/50 text-white hover:bg-red-500/80 h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm"
+                      className="bg-red-700/80 border-red-600/50 text-white hover:bg-red-600/90 h-10 w-10"
                       onClick={() => {
                         setPinPositions({});
                         setTempPinPositions({});
                         localStorage.removeItem('deepsurf-map-pins');
                         showSaveNotification('🗑️ Todos os pins removidos!');
-                        console.log('Todos os pins foram removidos');
                       }}
                       title="Limpar todos os pins"
                     >
@@ -483,82 +585,80 @@ const Map = () => {
                     </Button>
                   </div>
 
-                  {/* Menu para adicionar pins - movido para cima da legenda */}
+                  {/* Menu para adicionar pins - Mobile-first */}
                   {showAddPin && (
-                    <div 
-                      className="absolute bottom-20 left-4 bg-ocean-800/90 backdrop-blur-sm rounded-lg shadow-xl border border-ocean-600/30 p-3 z-20 w-64"
-                      onWheel={(e) => e.stopPropagation()} // Impede o zoom do mapa quando scrollar na lista
-                    >
-                      <h4 className="font-medium text-sm mb-2 text-slate-100">Escolha uma Praia</h4>
-                      {availableBeaches.length > 0 ? (
-                        <div 
-                          className="space-y-2 max-h-48 overflow-y-auto"
-                          onWheel={(e) => e.stopPropagation()} // Garantia extra
+                    <div className="absolute inset-x-2 bottom-2 sm:bottom-20 sm:left-4 sm:right-auto sm:w-80 bg-slate-800/95 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-600/40 p-4 z-20">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-white">Escolha uma Praia</h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowAddPin(false)}
+                          className="text-slate-400 hover:text-white h-8 w-8 p-0"
                         >
+                          ×
+                        </Button>
+                      </div>
+                      
+                      {availableBeaches.length > 0 ? (
+                        <div className="space-y-2 max-h-40 sm:max-h-60 overflow-y-auto">
                           {availableBeaches.map(beach => (
                             <button
                               key={beach.id}
                               onClick={() => addPin(beach.name)}
-                              className="w-full text-left p-2 rounded hover:bg-ocean-700/50 transition-colors text-sm border border-ocean-600/30 hover:border-ocean-500/50 bg-ocean-700/30"
+                              className="w-full text-left p-3 rounded-lg hover:bg-slate-700/60 transition-colors border border-slate-600/40 hover:border-slate-500/60 bg-slate-700/40"
                             >
                               <div className="flex items-center justify-between">
-                                <span className="font-medium text-slate-100">{beach.name}</span>
-                                <div className={`w-3 h-3 rounded-full ${beach.color}`}></div>
+                                <span className="font-medium text-white text-sm">{beach.name}</span>
+                                <div className={`w-4 h-4 rounded-full ${beach.color} shadow-sm`}></div>
                               </div>
-                              <div className="text-xs text-slate-300">{beach.city}</div>
+                              <div className="text-xs text-slate-300 mt-1">{beach.city}</div>
                             </button>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-4">
-                          <p className="text-sm text-slate-200 mb-2">🎉 Todos os pins foram adicionados!</p>
+                        <div className="text-center py-6">
+                          <p className="text-white mb-2">🎉 Todos os pins adicionados!</p>
                           <p className="text-xs text-slate-300">Use o botão ✎ para editar posições</p>
                         </div>
                       )}
-                      <button
-                        onClick={() => setShowAddPin(false)}
-                        className="mt-2 w-full text-xs text-slate-300 hover:text-slate-100 transition-colors"
-                      >
-                        Fechar
-                      </button>
                     </div>
                   )}
 
-                  {/* Botão de Adicionar Pin - Novo design em baixo */}
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                  {/* Botão de Adicionar Pin - Mobile-first */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 hidden sm:block">
                     <button
                       onClick={() => setShowAddPin(!showAddPin)}
-                      className="bg-ocean-800/80 backdrop-blur-sm hover:bg-ocean-700/90 transition-all duration-200 px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl border border-ocean-600/30 hover:border-ocean-500/50 flex items-center space-x-3 group"
+                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition-all duration-200 px-6 py-3 rounded-full shadow-lg hover:shadow-xl flex items-center space-x-3 group"
                     >
-                      <div className="w-8 h-8 bg-ocean-gradient rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                         <span className="text-white font-bold text-lg">📍</span>
                       </div>
                       <div className="text-left">
-                        <div className="font-semibold text-slate-100 text-sm">Adicionar Pin de Praia</div>
-                        <div className="text-xs text-slate-300">Marque suas praias favoritas no mapa</div>
+                        <div className="font-semibold text-white text-sm">Adicionar Pin</div>
+                        <div className="text-xs text-emerald-100">Marque suas praias favoritas</div>
                       </div>
-                      <div className="w-2 h-2 bg-ocean-400 rounded-full animate-pulse"></div>
                     </button>
                   </div>
 
-                  {/* Legenda */}
-                  <div className="absolute bottom-4 left-4 bg-ocean-800/80 backdrop-blur-sm border border-ocean-600/30 p-4 rounded-lg shadow-lg w-fit">
-                    <h3 className="font-semibold mb-2 text-sm text-slate-100">Legenda</h3>
-                    <div className="space-y-1 text-xs">
+                  {/* Legenda - Melhor posicionamento mobile */}
+                  <div className="absolute bottom-4 left-4 bg-slate-800/90 backdrop-blur-sm border border-slate-600/40 p-3 rounded-lg shadow-lg max-w-[200px] hidden sm:block">
+                    <h3 className="font-semibold mb-2 text-sm text-white">Legenda</h3>
+                    <div className="space-y-2 text-xs">
                       <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
                         <span className="text-slate-200">Excelente (5★)</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div>
                         <span className="text-slate-200">Bom (4★)</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-yellow-500 shadow-sm"></div>
                         <span className="text-slate-200">Moderado (3★)</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
                         <span className="text-slate-200">Fraco (1-2★)</span>
                       </div>
                     </div>
@@ -568,18 +668,18 @@ const Map = () => {
             </Card>
           </div>
 
-          {/* Beach Details Sidebar */}
-          <div className="space-y-4 sm:space-y-6 order-2">
+          {/* Beach Details Sidebar - Order responsivo */}
+          <div className="space-y-4 order-2 lg:order-2">
             {/* Selected Beach Details */}
             {selectedBeach && (
-              <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
-                <CardHeader className="pb-3 sm:pb-6">
-                  <CardTitle className="flex items-center justify-between text-slate-100 text-base sm:text-lg">
+              <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-600/40 shadow-xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center justify-between text-white text-lg">
                     <span>Detalhes da Praia</span>
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      className="text-slate-300 hover:text-slate-100 hover:bg-ocean-700/50 h-8 w-8 p-0"
+                      className="text-slate-400 hover:text-white hover:bg-slate-700/50 h-8 w-8 p-0"
                       onClick={() => setSelectedBeach(null)}
                     >
                       ×
@@ -594,51 +694,51 @@ const Map = () => {
                     return (
                       <div className="space-y-4">
                         <div>
-                          <h3 className="font-bold text-lg text-slate-100">{beach.name}</h3>
+                          <h3 className="font-bold text-xl text-white">{beach.name}</h3>
                           <p className="text-slate-300">{beach.city}</p>
                         </div>
                         
                         <div className="flex items-center space-x-2">
-                          <Badge className={getSurfabilityColor(beach.surfability)}>
+                          <Badge className={getSurfabilityColor(beach.surfability)} variant="secondary">
                             <Star className="h-3 w-3 mr-1" />
                             {getSurfabilityText(beach.surfability)}
                           </Badge>
                         </div>
 
-                        <p className="text-sm text-slate-200">{beach.description}</p>
+                        <p className="text-sm text-slate-200 leading-relaxed">{beach.description}</p>
 
                         <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div className="flex items-center space-x-2">
-                            <Waves className="h-4 w-4 text-blue-300" />
+                          <div className="flex items-center space-x-2 p-3 bg-slate-700/40 rounded-lg">
+                            <Waves className="h-4 w-4 text-teal-400" />
                             <div>
-                              <p className="font-medium text-slate-100">{beach.waveHeight}</p>
-                              <p className="text-slate-300">Altura</p>
+                              <p className="font-medium text-white">{beach.waveHeight}</p>
+                              <p className="text-slate-300 text-xs">Altura</p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Wind className="h-4 w-4 text-blue-300" />
+                          <div className="flex items-center space-x-2 p-3 bg-slate-700/40 rounded-lg">
+                            <Wind className="h-4 w-4 text-sky-400" />
                             <div>
-                              <p className="font-medium text-slate-100">{beach.wind}</p>
-                              <p className="text-slate-300">Vento</p>
+                              <p className="font-medium text-white">{beach.wind}</p>
+                              <p className="text-slate-300 text-xs">Vento</p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Waves className="h-4 w-4 text-teal-300" />
+                          <div className="flex items-center space-x-2 p-3 bg-slate-700/40 rounded-lg">
+                            <Waves className="h-4 w-4 text-emerald-400" />
                             <div>
-                              <p className="font-medium text-slate-100">{beach.period}</p>
-                              <p className="text-slate-300">Período</p>
+                              <p className="font-medium text-white">{beach.period}</p>
+                              <p className="text-slate-300 text-xs">Período</p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Thermometer className="h-4 w-4 text-orange-300" />
+                          <div className="flex items-center space-x-2 p-3 bg-slate-700/40 rounded-lg">
+                            <Thermometer className="h-4 w-4 text-orange-400" />
                             <div>
-                              <p className="font-medium text-slate-100">{beach.temperature}</p>
-                              <p className="text-slate-300">Temperatura</p>
+                              <p className="font-medium text-white">{beach.temperature}</p>
+                              <p className="text-slate-300 text-xs">Temperatura</p>
                             </div>
                           </div>
                         </div>
 
-                        <Button className="w-full bg-ocean-gradient text-white hover:opacity-90">
+                        <Button className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-semibold shadow-lg transition-all">
                           <Eye className="h-4 w-4 mr-2" />
                           Ver Previsão Detalhada
                         </Button>
@@ -650,11 +750,11 @@ const Map = () => {
             )}
 
             {/* Beach List */}
-            <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-600/40 shadow-xl">
               <CardHeader>
-                <CardTitle className="text-slate-100">Praias Monitoradas</CardTitle>
+                <CardTitle className="text-white">Praias Monitoradas</CardTitle>
                 <CardDescription className="text-slate-300">
-                  Clique para ver detalhes no mapa
+                  Toque para ver detalhes no mapa
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -662,31 +762,33 @@ const Map = () => {
                   {beaches.map((beach) => (
                     <div
                       key={beach.id}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors hover:bg-ocean-700/50 ${
-                        selectedBeach === beach.id ? 'bg-ocean-600/50 border border-ocean-500/50' : 'bg-ocean-700/30 border border-ocean-600/30'
+                      className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                        selectedBeach === beach.id 
+                          ? 'bg-gradient-to-r from-teal-600/20 to-emerald-600/20 border border-teal-500/50 shadow-lg' 
+                          : 'bg-slate-700/40 border border-slate-600/40 hover:bg-slate-700/60 hover:border-slate-500/50'
                       }`}
                       onClick={() => setSelectedBeach(beach.id)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h4 className="font-medium text-slate-100">{beach.name}</h4>
+                          <h4 className="font-medium text-white">{beach.name}</h4>
                           <p className="text-xs text-slate-300">{beach.city}</p>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Badge 
                             variant="secondary" 
-                            className={getSurfabilityColor(beach.surfability)}
+                            className={`${getSurfabilityColor(beach.surfability)} text-xs`}
                           >
                             {beach.surfability}★
                           </Badge>
-                          <div className={`w-3 h-3 rounded-full ${beach.color}`}></div>
+                          <div className={`w-4 h-4 rounded-full ${beach.color} shadow-sm`}></div>
                           {pinPositions[beach.name] && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 removePin(beach.name);
                               }}
-                              className="text-red-400 hover:text-red-300 text-xs ml-2"
+                              className="text-red-400 hover:text-red-300 text-sm ml-2 p-1 hover:bg-red-500/20 rounded transition-colors"
                               title="Remover pin"
                             >
                               ✕
@@ -696,16 +798,88 @@ const Map = () => {
                       </div>
                       <div className="flex items-center space-x-4 mt-2 text-xs text-slate-300">
                         <span className="flex items-center space-x-1">
-                          <Waves className="h-3 w-3" />
+                          <Waves className="h-3 w-3 text-teal-400" />
                           <span>{beach.waveHeight}</span>
                         </span>
                         <span className="flex items-center space-x-1">
-                          <Wind className="h-3 w-3" />
+                          <Wind className="h-3 w-3 text-sky-400" />
                           <span>{beach.wind}</span>
+                        </span>
+                        <span className="flex items-center space-x-1">
+                          <Thermometer className="h-3 w-3 text-orange-400" />
+                          <span>{beach.temperature}</span>
                         </span>
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Legenda Mobile - Mostra apenas em mobile */}
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-600/40 shadow-xl sm:hidden">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-base">Legenda</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
+                    <span className="text-slate-200">Excelente (5★)</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div>
+                    <span className="text-slate-200">Bom (4★)</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-yellow-500 shadow-sm"></div>
+                    <span className="text-slate-200">Moderado (3★)</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
+                    <span className="text-slate-200">Fraco (1-2★)</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Controles Mobile - Mostra apenas em mobile */}
+            <Card className="bg-slate-800/80 backdrop-blur-sm border-slate-600/40 shadow-xl sm:hidden">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-white font-medium">Controles do Mapa</div>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="bg-slate-700 border-slate-600 text-white h-10 w-10" 
+                      onClick={() => setZoom(z => Math.min(z + 0.2, 2.5))}
+                    >
+                      +
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="bg-slate-700 border-slate-600 text-white h-10 w-10" 
+                      onClick={() => setZoom(z => Math.max(z - 0.2, 0.5))}
+                    >
+                      -
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="bg-red-700 border-red-600 text-white h-10 w-10"
+                      onClick={() => {
+                        setPinPositions({});
+                        setTempPinPositions({});
+                        localStorage.removeItem('deepsurf-map-pins');
+                        showSaveNotification('🗑️ Todos os pins removidos!');
+                      }}
+                      title="Limpar todos os pins"
+                    >
+                      🗑️
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

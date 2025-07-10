@@ -9,6 +9,7 @@ type Profile = {
   weight?: number;
   level?: string;
   preferences?: string;
+  boards?: string; // JSON string das pranchas
   updated_at?: string;
 };
 
@@ -96,15 +97,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateProfile = async (data: Partial<Profile>) => {
-    if (!user) return;
-    const updates = { ...data, updated_at: new Date().toISOString() };
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({ id: user.id, ...updates })
-      .select()
-      .single();
-    if (error) throw error;
-    setUser({ ...user, ...updates });
+    if (!user) {
+      throw new Error('Usuário não autenticado');
+    }
+    
+    console.log('Atualizando perfil para usuário:', user.id);
+    console.log('Dados recebidos:', data);
+    
+    // Limpar dados undefined/null/empty para evitar problemas
+    const cleanData = Object.fromEntries(
+      Object.entries(data).filter(([_, value]) => {
+        if (value === undefined || value === null) return false;
+        if (typeof value === 'string' && value.trim() === '') return false;
+        if (typeof value === 'number' && value === 0) return false;
+        return true;
+      })
+    );
+    
+    console.log('Dados limpos a serem enviados:', cleanData);
+    
+    try {
+      // Tentar fazer update primeiro (mais comum)
+      const { data: updateResult, error: updateError } = await supabase
+        .from('profiles')
+        .update(cleanData)
+        .eq('id', user.id)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.log('Update falhou, tentando insert:', updateError.message);
+        
+        // Se update falhar (perfil não existe), fazer insert
+        const { data: insertResult, error: insertError } = await supabase
+          .from('profiles')
+          .insert({ id: user.id, ...cleanData })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('Insert também falhou:', insertError);
+          throw insertError;
+        }
+        
+        console.log('Perfil criado com sucesso:', insertResult);
+        setUser({ ...user, ...cleanData });
+      } else {
+        console.log('Perfil atualizado com sucesso:', updateResult);
+        setUser({ ...user, ...cleanData });
+      }
+      
+    } catch (error) {
+      console.error('Erro na função updateProfile:', error);
+      throw error;
+    }
   };
 
   return (
