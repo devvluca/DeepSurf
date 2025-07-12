@@ -5,11 +5,12 @@ type Profile = {
   id: string;
   name?: string;
   email?: string;
-  board_type?: string;
+  board_type?: string; // Campo legado mantido para compatibilidade
   weight?: number;
   level?: string;
   preferences?: string;
-  boards?: string; // JSON string das pranchas
+  boards?: any; // JSONB - pode ser string ou objeto
+  created_at?: string;
   updated_at?: string;
 };
 
@@ -104,48 +105,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('Atualizando perfil para usuário:', user.id);
     console.log('Dados recebidos:', data);
     
-    // Limpar dados undefined/null/empty para evitar problemas
-    const cleanData = Object.fromEntries(
-      Object.entries(data).filter(([_, value]) => {
-        if (value === undefined || value === null) return false;
-        if (typeof value === 'string' && value.trim() === '') return false;
-        if (typeof value === 'number' && value === 0) return false;
-        return true;
-      })
-    );
+    // Preparar dados para o Supabase
+    const supabaseData: any = {};
     
-    console.log('Dados limpos a serem enviados:', cleanData);
+    // Campos simples
+    if (data.name !== undefined && data.name.trim()) {
+      supabaseData.name = data.name.trim();
+    }
+    if (data.email !== undefined && data.email.trim()) {
+      supabaseData.email = data.email.trim();
+    }
+    if (data.weight !== undefined && data.weight > 0) {
+      supabaseData.weight = Number(data.weight);
+    }
+    if (data.level !== undefined && data.level.trim()) {
+      supabaseData.level = data.level.trim();
+    }
+    if (data.preferences !== undefined) {
+      supabaseData.preferences = data.preferences;
+    }
+    
+    // Campo boards - converter string JSON para objeto se necessário
+    if (data.boards !== undefined) {
+      try {
+        // Se boards é uma string JSON, parsear para objeto
+        if (typeof data.boards === 'string') {
+          supabaseData.boards = JSON.parse(data.boards);
+        } else {
+          // Se já é um objeto/array, usar diretamente
+          supabaseData.boards = data.boards;
+        }
+      } catch (error) {
+        console.error('Erro ao processar boards:', error);
+        supabaseData.boards = [];
+      }
+    }
+    
+    console.log('Dados preparados para Supabase:', supabaseData);
     
     try {
-      // Tentar fazer update primeiro (mais comum)
-      const { data: updateResult, error: updateError } = await supabase
+      // Tentar fazer upsert (update ou insert)
+      const { data: result, error } = await supabase
         .from('profiles')
-        .update(cleanData)
-        .eq('id', user.id)
+        .upsert({ id: user.id, ...supabaseData })
         .select()
         .single();
       
-      if (updateError) {
-        console.log('Update falhou, tentando insert:', updateError.message);
-        
-        // Se update falhar (perfil não existe), fazer insert
-        const { data: insertResult, error: insertError } = await supabase
-          .from('profiles')
-          .insert({ id: user.id, ...cleanData })
-          .select()
-          .single();
-        
-        if (insertError) {
-          console.error('Insert também falhou:', insertError);
-          throw insertError;
-        }
-        
-        console.log('Perfil criado com sucesso:', insertResult);
-        setUser({ ...user, ...cleanData });
-      } else {
-        console.log('Perfil atualizado com sucesso:', updateResult);
-        setUser({ ...user, ...cleanData });
+      if (error) {
+        console.error('Erro no upsert:', error);
+        throw error;
       }
+      
+      console.log('Perfil salvo com sucesso:', result);
+      
+      // Atualizar estado local
+      setUser({ ...user, ...data });
       
     } catch (error) {
       console.error('Erro na função updateProfile:', error);

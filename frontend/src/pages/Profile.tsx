@@ -12,16 +12,61 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useAuth } from '@/components/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 
-// Ícone customizado de prancha de surf
-const SurfboardIcon = ({ className = "h-4 w-4" }) => (
-  <svg 
-    viewBox="0 0 24 24" 
-    fill="currentColor" 
-    className={className}
-  >
-    <path d="M12 2C9.5 2 8 4 8 6.5v11c0 2.5 1.5 4.5 4 4.5s4-2 4-4.5v-11C16 4 14.5 2 12 2zm0 1.5c1.5 0 2.5 1 2.5 3v11c0 2-1 3-2.5 3s-2.5-1-2.5-3v-11c0-2 1-3 2.5-3zM11 5h2v1h-2V5zm0 2h2v1h-2V7zm0 2h2v1h-2V9zm0 2h2v1h-2v-1zm0 2h2v1h-2v-1z"/>
-  </svg>
-);
+// Função para converter cor hex para filtro CSS
+const hexToFilter = (hex: string) => {
+  // Remove o # se presente
+  hex = hex.replace('#', '');
+  
+  // Converte para RGB
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Para branco (padrão)
+  if (hex === 'ffffff' || hex === 'white') {
+    return 'brightness(0) saturate(100%) invert(100%)';
+  }
+  
+  // Para cores específicas, usando filtros CSS
+  const colorFilters: { [key: string]: string } = {
+    '3b82f6': 'brightness(0) saturate(100%) invert(35%) sepia(91%) saturate(2077%) hue-rotate(216deg) brightness(99%) contrast(94%)', // Azul
+    'ef4444': 'brightness(0) saturate(100%) invert(23%) sepia(89%) saturate(4794%) hue-rotate(348deg) brightness(103%) contrast(90%)', // Vermelho
+    '10b981': 'brightness(0) saturate(100%) invert(64%) sepia(80%) saturate(5423%) hue-rotate(144deg) brightness(90%) contrast(85%)', // Verde
+    'f59e0b': 'brightness(0) saturate(100%) invert(61%) sepia(80%) saturate(4943%) hue-rotate(20deg) brightness(101%) contrast(94%)', // Amarelo
+    '8b5cf6': 'brightness(0) saturate(100%) invert(47%) sepia(60%) saturate(3677%) hue-rotate(245deg) brightness(98%) contrast(96%)', // Roxo
+    'ec4899': 'brightness(0) saturate(100%) invert(41%) sepia(88%) saturate(1605%) hue-rotate(305deg) brightness(97%) contrast(95%)', // Rosa
+    '06b6d4': 'brightness(0) saturate(100%) invert(71%) sepia(77%) saturate(3533%) hue-rotate(168deg) brightness(93%) contrast(89%)', // Ciano
+    '84cc16': 'brightness(0) saturate(100%) invert(73%) sepia(40%) saturate(4756%) hue-rotate(67deg) brightness(96%) contrast(87%)', // Lima
+    'f97316': 'brightness(0) saturate(100%) invert(54%) sepia(98%) saturate(1659%) hue-rotate(13deg) brightness(105%) contrast(98%)', // Laranja
+    '6b7280': 'brightness(0) saturate(100%) invert(46%) sepia(7%) saturate(1090%) hue-rotate(191deg) brightness(95%) contrast(88%)', // Cinza
+    '1f2937': 'brightness(0) saturate(100%) invert(15%) sepia(15%) saturate(1134%) hue-rotate(194deg) brightness(96%) contrast(91%)', // Cinza escuro
+  };
+  
+  // Retorna o filtro específico ou tenta uma aproximação
+  return colorFilters[hex.toLowerCase()] || `brightness(0) saturate(100%) invert(100%)`;
+};
+
+// Componente do ícone da prancha usando PNG
+const SurfboardIcon = ({ className = "h-4 w-4", color = "#ffffff" }) => {
+  const filter = hexToFilter(color);
+  
+  return (
+    <img 
+      src="/img/surfboard-with-line.png" 
+      alt="Surfboard"
+      className={className}
+      style={{ 
+        filter: filter,
+        transition: 'filter 0.2s ease'
+      }}
+    />
+  );
+};
+
+// Função para retornar o ícone correto baseado no tipo da prancha (todos usam o mesmo PNG agora)
+const getBoardIcon = (type: string, className?: string, color?: string) => {
+  return <SurfboardIcon className={className} color={color} />;
+};
 
 const Profile = () => {
   const { user, updateProfile, loading: authLoading } = useAuth();
@@ -36,9 +81,11 @@ const Profile = () => {
   });
 
   // Múltiplas pranchas
-  const [boards, setBoards] = useState<Array<{id: string, name: string, length: string, volume: string}>>([]);
-  const [newBoard, setNewBoard] = useState({ name: '', length: '', volume: '' });
+  const [boards, setBoards] = useState<Array<{id: string, name: string, length: string, volume: string, color: string}>>([]);
+  const [newBoard, setNewBoard] = useState({ name: '', length: '', volume: '', color: '#3b82f6' });
   const [isAddingBoard, setIsAddingBoard] = useState(false);
+  const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
+  const [editingBoard, setEditingBoard] = useState({ name: '', length: '', volume: '', color: '#3b82f6' });
 
   // Sugestões dinâmicas para preferências
   const [preferenceSuggestions] = useState([
@@ -302,11 +349,21 @@ const Profile = () => {
         preferences: profileData.preferences || ''
       });
       
-      // Carregar pranchas do banco (JSON string) ou localStorage como fallback
+      // Carregar pranchas do banco (JSONB) ou localStorage como fallback
       if (profileData.boards) {
         try {
-          const boardsFromDB = JSON.parse(profileData.boards);
-          setBoards(Array.isArray(boardsFromDB) ? boardsFromDB : []);
+          // Se boards é uma string JSON, parsear
+          const boardsData = typeof profileData.boards === 'string' 
+            ? JSON.parse(profileData.boards) 
+            : profileData.boards;
+          
+          const boardsWithColor = Array.isArray(boardsData) 
+            ? boardsData.map(board => ({ 
+                ...board, 
+                color: board.color || '#3b82f6' 
+              }))
+            : [];
+          setBoards(boardsWithColor);
         } catch (error) {
           console.error('Erro ao parsear pranchas do banco:', error);
           // Fallback para localStorage
@@ -314,7 +371,13 @@ const Profile = () => {
           if (savedBoards) {
             try {
               const boards = JSON.parse(savedBoards);
-              setBoards(Array.isArray(boards) ? boards : []);
+              const boardsWithColor = Array.isArray(boards) 
+                ? boards.map(board => ({ 
+                    ...board, 
+                    color: board.color || '#3b82f6' 
+                  }))
+                : [];
+              setBoards(boardsWithColor);
             } catch (localError) {
               console.error('Erro ao carregar pranchas do localStorage:', localError);
               setBoards([]);
@@ -327,7 +390,13 @@ const Profile = () => {
         if (savedBoards) {
           try {
             const boards = JSON.parse(savedBoards);
-            setBoards(Array.isArray(boards) ? boards : []);
+            const boardsWithColor = Array.isArray(boards) 
+              ? boards.map(board => ({ 
+                  ...board, 
+                  color: board.color || '#3b82f6' 
+                }))
+              : [];
+            setBoards(boardsWithColor);
           } catch (error) {
             console.error('Erro ao carregar pranchas do localStorage:', error);
             setBoards([]);
@@ -391,7 +460,7 @@ const Profile = () => {
       
       // Verificar mudança de pranchas (comparar com dados do banco)
       const oldBoards = profileData?.boards ? 
-        (typeof profileData.boards === 'string' ? JSON.parse(profileData.boards || '[]') : profileData.boards) 
+        (typeof profileData.boards === 'string' ? JSON.parse(profileData.boards || '[]') : (Array.isArray(profileData.boards) ? profileData.boards : []))
         : [];
       if (JSON.stringify(oldBoards) !== JSON.stringify(boards)) {
         const oldBoardsText = Array.isArray(oldBoards) && oldBoards.length > 0 
@@ -437,8 +506,10 @@ const Profile = () => {
         profileUpdate.preferences = selectedPreferences.join(', ');
       }
       
-      // Pranchas - salvar apenas no localStorage por enquanto
-      // TODO: Criar campo 'boards' na tabela 'profiles' do Supabase
+      // Pranchas - salvar no banco como JSONB e localStorage como backup
+      if (boards.length > 0) {
+        profileUpdate.boards = boards; // Enviar como array/objeto diretamente
+      }
       localStorage.setItem(`user_boards_${user?.id}`, JSON.stringify(boards));
       
       // Email do usuário atual (para garantir que existe)
@@ -548,16 +619,44 @@ const Profile = () => {
         id: Date.now().toString(),
         name: newBoard.name,
         length: newBoard.length,
-        volume: newBoard.volume
+        volume: newBoard.volume,
+        color: newBoard.color
       };
       setBoards([...boards, board]);
-      setNewBoard({ name: '', length: '', volume: '' });
+      setNewBoard({ name: '', length: '', volume: '', color: '#3b82f6' });
       setIsAddingBoard(false);
     }
   };
 
   const handleRemoveBoard = (id: string) => {
     setBoards(boards.filter(board => board.id !== id));
+  };
+
+  const handleEditBoard = (board: any) => {
+    setEditingBoardId(board.id);
+    setEditingBoard({
+      name: board.name,
+      length: board.length,
+      volume: board.volume,
+      color: board.color
+    });
+  };
+
+  const handleSaveEditBoard = () => {
+    if (editingBoard.name && editingBoard.length && editingBoard.volume && editingBoard.color) {
+      setBoards(boards.map(board => 
+        board.id === editingBoardId 
+          ? { ...board, ...editingBoard }
+          : board
+      ));
+      setEditingBoardId(null);
+      setEditingBoard({ name: '', length: '', volume: '', color: '#3b82f6' });
+    }
+  };
+
+  const handleCancelEditBoard = () => {
+    setEditingBoardId(null);
+    setEditingBoard({ name: '', length: '', volume: '', color: '#3b82f6' });
   };
 
   // Funções para gerenciar preferências
@@ -762,26 +861,200 @@ const Profile = () => {
                       </Label>
                       <div className="space-y-2 mb-3">
                         {boards.map((board) => (
-                          <div key={board.id} className="flex items-center justify-between bg-ocean-700/20 p-3 rounded-lg border border-ocean-600/20">
-                            <div className="flex items-center space-x-3">
-                              <SurfboardIcon className="h-5 w-5 text-ocean-300 flex-shrink-0" />
-                              <div className="flex flex-col">
-                                <span className="text-white text-sm font-medium">
-                                  {board.name}
-                                </span>
-                                <span className="text-ocean-200 text-xs">
-                                  {board.length} • {board.volume}
-                                </span>
+                          <div key={board.id} className="bg-ocean-700/20 p-3 rounded-lg border border-ocean-600/20">
+                            {editingBoardId === board.id ? (
+                              // Modo de edição para esta prancha
+                              <div className="space-y-3">
+                                <div className="flex items-center space-x-3 mb-3">
+                                  {getBoardIcon(editingBoard.name, "h-5 w-5 flex-shrink-0", editingBoard.color)}
+                                  <span className="text-white text-sm font-medium">Editando prancha</span>
+                                </div>
+                                
+                                {/* Tipo da Prancha */}
+                                <div>
+                                  <Label className="text-ocean-100 text-xs font-medium">Tipo</Label>
+                                  <Select
+                                    value={editingBoard.name}
+                                    onValueChange={(value) => setEditingBoard({...editingBoard, name: value})}
+                                  >
+                                    <SelectTrigger className="bg-ocean-700/30 border-ocean-600/30 text-white text-xs">
+                                      <SelectValue placeholder="Escolha o tipo..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Shortboard">Shortboard</SelectItem>
+                                      <SelectItem value="Longboard">Longboard</SelectItem>
+                                      <SelectItem value="Funboard">Funboard</SelectItem>
+                                      <SelectItem value="Fish">Fish</SelectItem>
+                                      <SelectItem value="Gun">Gun</SelectItem>
+                                      <SelectItem value="Mini Mal">Mini Mal</SelectItem>
+                                      <SelectItem value="Hybrid">Hybrid</SelectItem>
+                                      <SelectItem value="Step Up">Step Up</SelectItem>
+                                      <SelectItem value="Mini Simmons">Mini Simmons</SelectItem>
+                                      <SelectItem value="Foamboard">Foamboard</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* Tamanho da Prancha */}
+                                <div>
+                                  <Label className="text-ocean-100 text-xs font-medium">Tamanho</Label>
+                                  <Select
+                                    value={editingBoard.length}
+                                    onValueChange={(value) => setEditingBoard({...editingBoard, length: value})}
+                                  >
+                                    <SelectTrigger className="bg-ocean-700/30 border-ocean-600/30 text-white text-xs">
+                                      <SelectValue placeholder="Escolha o tamanho..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="5'6">5'6" (168cm)</SelectItem>
+                                      <SelectItem value="5'8">5'8" (173cm)</SelectItem>
+                                      <SelectItem value="5'10">5'10" (178cm)</SelectItem>
+                                      <SelectItem value="5'11">5'11" (180cm)</SelectItem>
+                                      <SelectItem value="6'0">6'0" (183cm)</SelectItem>
+                                      <SelectItem value="6'1">6'1" (185cm)</SelectItem>
+                                      <SelectItem value="6'2">6'2" (188cm)</SelectItem>
+                                      <SelectItem value="6'3">6'3" (191cm)</SelectItem>
+                                      <SelectItem value="6'4">6'4" (193cm)</SelectItem>
+                                      <SelectItem value="6'6">6'6" (198cm)</SelectItem>
+                                      <SelectItem value="7'0">7'0" (213cm)</SelectItem>
+                                      <SelectItem value="7'6">7'6" (229cm)</SelectItem>
+                                      <SelectItem value="8'0">8'0" (244cm)</SelectItem>
+                                      <SelectItem value="8'6">8'6" (259cm)</SelectItem>
+                                      <SelectItem value="9'0">9'0" (274cm)</SelectItem>
+                                      <SelectItem value="9'2">9'2" (279cm)</SelectItem>
+                                      <SelectItem value="9'6">9'6" (290cm)</SelectItem>
+                                      <SelectItem value="10'0">10'0" (305cm)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* Volume/Litragem */}
+                                <div>
+                                  <Label className="text-ocean-100 text-xs font-medium">Volume</Label>
+                                  <Select
+                                    value={editingBoard.volume}
+                                    onValueChange={(value) => setEditingBoard({...editingBoard, volume: value})}
+                                  >
+                                    <SelectTrigger className="bg-ocean-700/30 border-ocean-600/30 text-white text-xs">
+                                      <SelectValue placeholder="Escolha o volume..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="18L">18L - Ultra baixo</SelectItem>
+                                      <SelectItem value="20L">20L - Muito baixo</SelectItem>
+                                      <SelectItem value="22L">22L - Baixo</SelectItem>
+                                      <SelectItem value="24L">24L - Baixo médio</SelectItem>
+                                      <SelectItem value="26L">26L - Médio baixo</SelectItem>
+                                      <SelectItem value="28L">28L - Médio</SelectItem>
+                                      <SelectItem value="30L">30L - Médio</SelectItem>
+                                      <SelectItem value="32L">32L - Médio alto</SelectItem>
+                                      <SelectItem value="34L">34L - Alto</SelectItem>
+                                      <SelectItem value="36L">36L - Alto</SelectItem>
+                                      <SelectItem value="38L">38L - Muito alto</SelectItem>
+                                      <SelectItem value="40L">40L - Muito alto</SelectItem>
+                                      <SelectItem value="45L">45L - Funboard</SelectItem>
+                                      <SelectItem value="50L">50L - Funboard</SelectItem>
+                                      <SelectItem value="55L">55L - Mini mal</SelectItem>
+                                      <SelectItem value="60L">60L - Mini mal</SelectItem>
+                                      <SelectItem value="65L">65L - Longboard</SelectItem>
+                                      <SelectItem value="70L">70L - Longboard</SelectItem>
+                                      <SelectItem value="75L">75L - Longboard</SelectItem>
+                                      <SelectItem value="80L">80L - Longboard</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* Cor da Prancha */}
+                                <div>
+                                  <Label className="text-ocean-100 text-xs font-medium">Cor</Label>
+                                  <div className="flex items-center space-x-3 mt-2">
+                                    {/* Preview do ícone com cor selecionada */}
+                                    <div className="flex items-center space-x-2">
+                                      {getBoardIcon(editingBoard.name, "h-6 w-6", editingBoard.color)}
+                                      <span className="text-ocean-200 text-xs">Preview</span>
+                                    </div>
+                                    
+                                    {/* Cores predefinidas */}
+                                    <div className="flex flex-wrap gap-2">
+                                      {[
+                                        '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899',
+                                        '#06b6d4', '#84cc16', '#f97316', '#6b7280', '#1f2937', '#ffffff'
+                                      ].map((color) => (
+                                        <button
+                                          key={color}
+                                          type="button"
+                                          onClick={() => setEditingBoard({...editingBoard, color})}
+                                          className={`w-6 h-6 rounded-full border-2 transition-all ${
+                                            editingBoard.color === color 
+                                              ? 'border-white scale-110' 
+                                              : 'border-ocean-600/50 hover:border-ocean-400/70 hover:scale-105'
+                                          }`}
+                                          style={{ backgroundColor: color }}
+                                        />
+                                      ))}
+                                    </div>
+                                    
+                                    {/* Input de cor personalizada */}
+                                    <div className="flex items-center space-x-2">
+                                      <input
+                                        type="color"
+                                        value={editingBoard.color}
+                                        onChange={(e) => setEditingBoard({...editingBoard, color: e.target.value})}
+                                        className="w-8 h-8 rounded border border-ocean-600/30 bg-transparent cursor-pointer"
+                                      />
+                                      <span className="text-ocean-200 text-xs">Custom</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Botões de ação */}
+                                <div className="flex gap-2 pt-2">
+                                  <Button 
+                                    onClick={handleSaveEditBoard} 
+                                    size="sm" 
+                                    className="bg-ocean-600 hover:bg-ocean-500 text-white"
+                                    disabled={!editingBoard.name || !editingBoard.length || !editingBoard.volume || !editingBoard.color}
+                                  >
+                                    Salvar
+                                  </Button>
+                                  <Button onClick={handleCancelEditBoard} variant="outline" size="sm" className="border-ocean-600/50 text-ocean-100 hover:bg-ocean-700/70 bg-ocean-800/30">
+                                    Cancelar
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveBoard(board.id)}
-                              className="text-red-400 hover:text-red-300 hover:bg-red-900/20 h-8 w-8 p-0 flex-shrink-0"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            ) : (
+                              // Modo de visualização normal
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  {getBoardIcon(board.name, "h-5 w-5 flex-shrink-0", board.color || '#3b82f6')}
+                                  <div className="flex flex-col">
+                                    <span className="text-white text-sm font-medium">
+                                      {board.length} • {board.volume}
+                                    </span>
+                                    <span className="text-ocean-200 text-xs">
+                                      {board.name}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditBoard(board)}
+                                    className="text-ocean-300 hover:text-white hover:bg-ocean-700/50 h-8 w-8 p-0 flex-shrink-0"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveBoard(board.id)}
+                                    className="text-red-400 hover:text-red-300 hover:bg-red-900/20 h-8 w-8 p-0 flex-shrink-0"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -881,6 +1154,59 @@ const Profile = () => {
                                 </SelectContent>
                               </Select>
                             </div>
+                            
+                            {/* Cor da Prancha */}
+                            <div>
+                              <Label className="text-ocean-100 text-xs font-medium">Cor</Label>
+                              <div className="flex items-center space-x-3 mt-2">
+                                {/* Preview do ícone com cor selecionada */}
+                                <div className="flex items-center space-x-2">
+                                  {getBoardIcon(newBoard.name, "h-6 w-6", newBoard.color)}
+                                  <span className="text-ocean-200 text-xs">Preview</span>
+                                </div>
+                                
+                                {/* Cores predefinidas */}
+                                <div className="flex flex-wrap gap-2">
+                                  {[
+                                    '#3b82f6', // Azul
+                                    '#ef4444', // Vermelho
+                                    '#10b981', // Verde
+                                    '#f59e0b', // Amarelo
+                                    '#8b5cf6', // Roxo
+                                    '#ec4899', // Rosa
+                                    '#06b6d4', // Ciano
+                                    '#84cc16', // Lima
+                                    '#f97316', // Laranja
+                                    '#6b7280', // Cinza
+                                    '#1f2937', // Cinza escuro
+                                    '#ffffff'  // Branco
+                                  ].map((color) => (
+                                    <button
+                                      key={color}
+                                      type="button"
+                                      onClick={() => setNewBoard({...newBoard, color})}
+                                      className={`w-6 h-6 rounded-full border-2 transition-all ${
+                                        newBoard.color === color 
+                                          ? 'border-white scale-110' 
+                                          : 'border-ocean-600/50 hover:border-ocean-400/70 hover:scale-105'
+                                      }`}
+                                      style={{ backgroundColor: color }}
+                                    />
+                                  ))}
+                                </div>
+                                
+                                {/* Input de cor personalizada */}
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="color"
+                                    value={newBoard.color}
+                                    onChange={(e) => setNewBoard({...newBoard, color: e.target.value})}
+                                    className="w-8 h-8 rounded border border-ocean-600/30 bg-transparent cursor-pointer"
+                                  />
+                                  <span className="text-ocean-200 text-xs">Custom</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                           
                           <div className="flex gap-2 pt-2">
@@ -888,7 +1214,7 @@ const Profile = () => {
                               onClick={handleAddBoard} 
                               size="sm" 
                               className="bg-ocean-600 hover:bg-ocean-500 text-white"
-                              disabled={!newBoard.name || !newBoard.length || !newBoard.volume}
+                              disabled={!newBoard.name || !newBoard.length || !newBoard.volume || !newBoard.color}
                             >
                               Adicionar
                             </Button>
@@ -1012,11 +1338,193 @@ const Profile = () => {
                         <Waves className="h-4 w-4 mr-2 text-ocean-200" />
                         Minhas Pranchas
                       </p>
-                      <div className="ml-6 space-y-1 mt-1">
+                      <div className="ml-6 space-y-2 mt-2">
                         {boards.length > 0 ? (
                           boards.map((board) => (
-                            <div key={board.id} className="bg-ocean-700/20 p-2 rounded text-sm text-white">
-                              <strong>{board.name}</strong> - {board.length} - {board.volume}
+                            <div key={board.id} className="bg-ocean-700/20 p-3 rounded-lg border border-ocean-600/20">
+                              {editingBoardId === board.id ? (
+                                // Modo de edição para esta prancha
+                                <div className="space-y-3">
+                                  <div className="flex items-center space-x-3 mb-3">
+                                    {getBoardIcon(editingBoard.name, "h-5 w-5 flex-shrink-0", editingBoard.color)}
+                                    <span className="text-white text-sm font-medium">Editando prancha</span>
+                                  </div>
+                                  
+                                  {/* Tipo da Prancha */}
+                                  <div>
+                                    <Label className="text-ocean-100 text-xs font-medium">Tipo</Label>
+                                    <Select
+                                      value={editingBoard.name}
+                                      onValueChange={(value) => setEditingBoard({...editingBoard, name: value})}
+                                    >
+                                      <SelectTrigger className="bg-ocean-700/30 border-ocean-600/30 text-white text-xs">
+                                        <SelectValue placeholder="Escolha o tipo..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Shortboard">Shortboard</SelectItem>
+                                        <SelectItem value="Longboard">Longboard</SelectItem>
+                                        <SelectItem value="Funboard">Funboard</SelectItem>
+                                        <SelectItem value="Fish">Fish</SelectItem>
+                                        <SelectItem value="Gun">Gun</SelectItem>
+                                        <SelectItem value="Mini Mal">Mini Mal</SelectItem>
+                                        <SelectItem value="Hybrid">Hybrid</SelectItem>
+                                        <SelectItem value="Step Up">Step Up</SelectItem>
+                                        <SelectItem value="Mini Simmons">Mini Simmons</SelectItem>
+                                        <SelectItem value="Foamboard">Foamboard</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  
+                                  {/* Tamanho da Prancha */}
+                                  <div>
+                                    <Label className="text-ocean-100 text-xs font-medium">Tamanho</Label>
+                                    <Select
+                                      value={editingBoard.length}
+                                      onValueChange={(value) => setEditingBoard({...editingBoard, length: value})}
+                                    >
+                                      <SelectTrigger className="bg-ocean-700/30 border-ocean-600/30 text-white text-xs">
+                                        <SelectValue placeholder="Escolha o tamanho..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="5'6">5'6" (168cm)</SelectItem>
+                                        <SelectItem value="5'8">5'8" (173cm)</SelectItem>
+                                        <SelectItem value="5'10">5'10" (178cm)</SelectItem>
+                                        <SelectItem value="5'11">5'11" (180cm)</SelectItem>
+                                        <SelectItem value="6'0">6'0" (183cm)</SelectItem>
+                                        <SelectItem value="6'1">6'1" (185cm)</SelectItem>
+                                        <SelectItem value="6'2">6'2" (188cm)</SelectItem>
+                                        <SelectItem value="6'3">6'3" (191cm)</SelectItem>
+                                        <SelectItem value="6'4">6'4" (193cm)</SelectItem>
+                                        <SelectItem value="6'6">6'6" (198cm)</SelectItem>
+                                        <SelectItem value="7'0">7'0" (213cm)</SelectItem>
+                                        <SelectItem value="7'6">7'6" (229cm)</SelectItem>
+                                        <SelectItem value="8'0">8'0" (244cm)</SelectItem>
+                                        <SelectItem value="8'6">8'6" (259cm)</SelectItem>
+                                        <SelectItem value="9'0">9'0" (274cm)</SelectItem>
+                                        <SelectItem value="9'2">9'2" (279cm)</SelectItem>
+                                        <SelectItem value="9'6">9'6" (290cm)</SelectItem>
+                                        <SelectItem value="10'0">10'0" (305cm)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  
+                                  {/* Volume/Litragem */}
+                                  <div>
+                                    <Label className="text-ocean-100 text-xs font-medium">Volume</Label>
+                                    <Select
+                                      value={editingBoard.volume}
+                                      onValueChange={(value) => setEditingBoard({...editingBoard, volume: value})}
+                                    >
+                                      <SelectTrigger className="bg-ocean-700/30 border-ocean-600/30 text-white text-xs">
+                                        <SelectValue placeholder="Escolha o volume..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="18L">18L - Ultra baixo</SelectItem>
+                                        <SelectItem value="20L">20L - Muito baixo</SelectItem>
+                                        <SelectItem value="22L">22L - Baixo</SelectItem>
+                                        <SelectItem value="24L">24L - Baixo médio</SelectItem>
+                                        <SelectItem value="26L">26L - Médio baixo</SelectItem>
+                                        <SelectItem value="28L">28L - Médio</SelectItem>
+                                        <SelectItem value="30L">30L - Médio</SelectItem>
+                                        <SelectItem value="32L">32L - Médio alto</SelectItem>
+                                        <SelectItem value="34L">34L - Alto</SelectItem>
+                                        <SelectItem value="36L">36L - Alto</SelectItem>
+                                        <SelectItem value="38L">38L - Muito alto</SelectItem>
+                                        <SelectItem value="40L">40L - Muito alto</SelectItem>
+                                        <SelectItem value="45L">45L - Funboard</SelectItem>
+                                        <SelectItem value="50L">50L - Funboard</SelectItem>
+                                        <SelectItem value="55L">55L - Mini mal</SelectItem>
+                                        <SelectItem value="60L">60L - Mini mal</SelectItem>
+                                        <SelectItem value="65L">65L - Longboard</SelectItem>
+                                        <SelectItem value="70L">70L - Longboard</SelectItem>
+                                        <SelectItem value="75L">75L - Longboard</SelectItem>
+                                        <SelectItem value="80L">80L - Longboard</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  
+                                  {/* Cor da Prancha */}
+                                  <div>
+                                    <Label className="text-ocean-100 text-xs font-medium">Cor</Label>
+                                    <div className="flex items-center space-x-3 mt-2">
+                                      {/* Preview do ícone com cor selecionada */}
+                                      <div className="flex items-center space-x-2">
+                                        {getBoardIcon(editingBoard.name, "h-6 w-6", editingBoard.color)}
+                                        <span className="text-ocean-200 text-xs">Preview</span>
+                                      </div>
+                                      
+                                      {/* Cores predefinidas */}
+                                      <div className="flex flex-wrap gap-2">
+                                        {[
+                                          '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899',
+                                          '#06b6d4', '#84cc16', '#f97316', '#6b7280', '#1f2937', '#ffffff'
+                                        ].map((color) => (
+                                          <button
+                                            key={color}
+                                            type="button"
+                                            onClick={() => setEditingBoard({...editingBoard, color})}
+                                            className={`w-6 h-6 rounded-full border-2 transition-all ${
+                                              editingBoard.color === color 
+                                                ? 'border-white scale-110' 
+                                                : 'border-ocean-600/50 hover:border-ocean-400/70 hover:scale-105'
+                                            }`}
+                                            style={{ backgroundColor: color }}
+                                          />
+                                        ))}
+                                      </div>
+                                      
+                                      {/* Input de cor personalizada */}
+                                      <div className="flex items-center space-x-2">
+                                        <input
+                                          type="color"
+                                          value={editingBoard.color}
+                                          onChange={(e) => setEditingBoard({...editingBoard, color: e.target.value})}
+                                          className="w-8 h-8 rounded border border-ocean-600/30 bg-transparent cursor-pointer"
+                                        />
+                                        <span className="text-ocean-200 text-xs">Custom</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Botões de ação */}
+                                  <div className="flex gap-2 pt-2">
+                                    <Button 
+                                      onClick={handleSaveEditBoard} 
+                                      size="sm" 
+                                      className="bg-ocean-600 hover:bg-ocean-500 text-white"
+                                      disabled={!editingBoard.name || !editingBoard.length || !editingBoard.volume || !editingBoard.color}
+                                    >
+                                      Salvar
+                                    </Button>
+                                    <Button onClick={handleCancelEditBoard} variant="outline" size="sm" className="border-ocean-600/50 text-ocean-100 hover:bg-ocean-700/70 bg-ocean-800/30">
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                // Modo de visualização normal
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-3">
+                                    {getBoardIcon(board.name, "h-5 w-5 flex-shrink-0", board.color || '#3b82f6')}
+                                    <div className="flex flex-col">
+                                      <span className="text-white text-sm font-medium">
+                                        {board.length} • {board.volume}
+                                      </span>
+                                      <span className="text-ocean-200 text-xs">
+                                        {board.name}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditBoard(board)}
+                                    className="text-ocean-300 hover:text-white hover:bg-ocean-700/50 h-8 w-8 p-0 flex-shrink-0"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           ))
                         ) : (
@@ -1050,7 +1558,7 @@ const Profile = () => {
                         <Button
                           variant="ghost"
                           onClick={() => setShowHistory(!showHistory)}
-                          className="p-0 h-auto text-sm text-ocean-200 hover:text-ocean-100 flex items-center group"
+                          className="p-0 h-auto text-sm text-ocean-200 flex items-center hover:bg-transparent hover:text-ocean-200"
                         >
                           <History className="h-4 w-4 mr-2 text-ocean-200" />
                           Histórico de Mudanças ({preferenceHistory.length})
