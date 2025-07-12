@@ -95,8 +95,12 @@ const About = () => {
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
             <div className="flex flex-col items-center space-y-6 sm:space-y-8 lg:flex-row lg:space-y-0 lg:space-x-8">
-              <div className="w-24 h-24 sm:w-32 sm:h-32 bg-ocean-gradient rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl sm:text-4xl font-bold text-white">LA</span>
+              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden border-4 border-ocean-300/30">
+                <img 
+                  src="/img/perfil.jpg" 
+                  alt="Luca Aguiar" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div className="text-center lg:text-left flex-1 space-y-4">
                 <div>
@@ -246,42 +250,6 @@ const About = () => {
                   <Heart className="h-3 w-3 sm:h-4 sm:w-4 mr-2 flex-shrink-0" />
                   Enviar Feedback
                 </a>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* API Information */}
-        <Card className="bg-ocean-800/40 backdrop-blur-sm border-ocean-600/30">
-          <CardHeader className="pb-4 sm:pb-6">
-            <CardTitle className="text-center text-xl sm:text-2xl text-white">API DeepSurf</CardTitle>
-            <CardDescription className="text-center text-ocean-100 text-sm sm:text-base px-2">
-              Integre nossas previsões em sua aplicação
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-4 sm:px-6">
-            <div className="bg-gray-900 rounded-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 overflow-x-auto">
-              <code className="text-green-400 text-xs sm:text-sm whitespace-nowrap block">
-                GET https://api.deepsurf.com/v1/forecast?lat=-23.5505&lng=-46.6333
-              </code>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-              <div className="text-center p-3 sm:p-4 bg-ocean-900/30 rounded-lg">
-                <div className="text-xl sm:text-2xl font-bold text-ocean-300 mb-1 sm:mb-2">REST API</div>
-                <p className="text-ocean-100 text-xs sm:text-sm">Interface RESTful simples e intuitiva</p>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-ocean-900/30 rounded-lg">
-                <div className="text-xl sm:text-2xl font-bold text-ocean-300 mb-1 sm:mb-2">JSON</div>
-                <p className="text-ocean-100 text-xs sm:text-sm">Dados estruturados em formato JSON</p>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-ocean-900/30 rounded-lg">
-                <div className="text-xl sm:text-2xl font-bold text-ocean-300 mb-1 sm:mb-2">Rate Limit</div>
-                <p className="text-ocean-100 text-xs sm:text-sm">1000 requests/hora no plano gratuito</p>
-              </div>
-            </div>
-            <div className="text-center mt-4 sm:mt-6">
-              <Button className="bg-ocean-gradient text-white hover:opacity-90 w-full sm:w-auto text-sm">
-                Documentação da API
               </Button>
             </div>
           </CardContent>
