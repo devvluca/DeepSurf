@@ -117,7 +117,8 @@ const Profile = () => {
     duration: '',
     waves: '',
     rating: 3,
-    notes: ''
+    notes: '',
+    board: '' // Prancha usada na sessão
   });
 
   // Estatísticas reais - MOVIDO PARA CIMA ANTES DOS RETURNS
@@ -548,7 +549,7 @@ const Profile = () => {
   // Adicionar nova sessão
   const handleAddSession = async () => {
     if (!user) return;
-    if (!newSession.date || !newSession.location || !newSession.duration || !newSession.waves) return;
+    if (!newSession.date || !newSession.location || !newSession.duration || !newSession.waves || !newSession.board) return;
     
     // Validação de limite de caracteres para notas
     if (newSession.notes.length > 500) {
@@ -577,7 +578,8 @@ const Profile = () => {
           duration: '',
           waves: '',
           rating: 3,
-          notes: ''
+          notes: '',
+          board: ''
         });
       } else {
         throw new Error(error?.message || 'Erro ao adicionar sessão');
@@ -1771,8 +1773,8 @@ const Profile = () => {
                     Nova Sessão de Surf
                   </h4>
                   
-                  {/* Primeira linha: Data, Local, Duração */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  {/* Primeira linha: Data, Local, Duração, Prancha */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
                       <Label htmlFor="date" className="text-ocean-100 text-sm font-medium">Data</Label>
                       <Input
@@ -1822,6 +1824,43 @@ const Profile = () => {
                           <SelectItem value="3h">3h</SelectItem>
                           <SelectItem value="4h">4h</SelectItem>
                           <SelectItem value="5h+">5h+</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="board" className="text-ocean-100 text-sm font-medium">Prancha Usada</Label>
+                      <Select
+                        value={newSession.board}
+                        onValueChange={v => setNewSession({ ...newSession, board: v })}
+                      >
+                        <SelectTrigger className="mt-1 bg-ocean-700/30 border-ocean-600/30 text-white">
+                          <SelectValue placeholder="Escolha a prancha..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {boards.length > 0 ? (
+                            boards.map((board) => (
+                              <SelectItem key={board.id} value={board.id}>
+                                <div className="flex items-center space-x-2">
+                                  <img 
+                                    src="/img/surfboard-with-line.png" 
+                                    alt="Surfboard"
+                                    className="h-4 w-4"
+                                    style={{ 
+                                      filter: board.color === '#ffffff' || board.color === 'white' 
+                                        ? 'brightness(0) saturate(100%) invert(70%)' // Cinza claro para branco
+                                        : hexToFilter(board.color || '#3b82f6'),
+                                      transition: 'filter 0.2s ease'
+                                    }}
+                                  />
+                                  <span>{board.length} • {board.volume}</span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-boards" disabled>
+                              Cadastre uma prancha primeiro
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1925,7 +1964,8 @@ const Profile = () => {
                         duration: '',
                         waves: '',
                         rating: 3,
-                        notes: ''
+                        notes: '',
+                        board: ''
                       })}
                     >
                       Limpar Formulário
@@ -1933,7 +1973,7 @@ const Profile = () => {
                     <Button 
                       className="bg-ocean-gradient text-white hover:opacity-90 px-6 py-2 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed" 
                       onClick={handleAddSession}
-                      disabled={!newSession.date || !newSession.location || !newSession.duration || !newSession.waves}
+                      disabled={!newSession.date || !newSession.location || !newSession.duration || !newSession.waves || !newSession.board}
                     >
                       <Waves className="h-4 w-4 mr-2" />
                       Adicionar Sessão
@@ -2010,6 +2050,43 @@ const Profile = () => {
                                 <SelectItem value="2.5m">2.5m</SelectItem>
                                 <SelectItem value="3.0m">3.0m</SelectItem>
                                 <SelectItem value="3.0m+">3.0m+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor={`board-edit-${session.id}`}>Prancha</Label>
+                            <Select
+                              value={session.board || ''}
+                              onValueChange={v => setSurfSessions(surfSessions.map(s => s.id === session.id ? { ...s, board: v } : s))}
+                            >
+                              <SelectTrigger className="w-40">
+                                <SelectValue placeholder="Prancha..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {boards.length > 0 ? (
+                                  boards.map((board) => (
+                                    <SelectItem key={board.id} value={board.id}>
+                                      <div className="flex items-center space-x-2">
+                                        <img 
+                                          src="/img/surfboard-with-line.png" 
+                                          alt="Surfboard"
+                                          className="h-4 w-4"
+                                          style={{ 
+                                            filter: board.color === '#ffffff' || board.color === 'white' 
+                                              ? 'brightness(0) saturate(100%) invert(70%)' // Cinza claro para branco
+                                              : hexToFilter(board.color || '#3b82f6'),
+                                            transition: 'filter 0.2s ease'
+                                          }}
+                                        />
+                                        <span>{board.length} • {board.volume}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <SelectItem value="no-boards" disabled>
+                                    Cadastre uma prancha primeiro
+                                  </SelectItem>
+                                )}
                               </SelectContent>
                             </Select>
                           </div>
@@ -2097,6 +2174,18 @@ const Profile = () => {
                             <span>{session.waves}</span>
                           </span>
                           <span>{session.duration}</span>
+                          {session.board && boards.find(b => b.id === session.board) && (
+                            <span className="flex items-center space-x-1">
+                              {getBoardIcon(
+                                boards.find(b => b.id === session.board)?.name || 'Shortboard', 
+                                "h-3 w-3", 
+                                boards.find(b => b.id === session.board)?.color === '#ffffff' || boards.find(b => b.id === session.board)?.color === 'white'
+                                  ? '#9ca3af' // Cinza claro para branco
+                                  : boards.find(b => b.id === session.board)?.color || '#3b82f6'
+                              )}
+                              <span>{boards.find(b => b.id === session.board)?.length} • {boards.find(b => b.id === session.board)?.volume}</span>
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-ocean-100">{session.notes}</p>
                       </div>

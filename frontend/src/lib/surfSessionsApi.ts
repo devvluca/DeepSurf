@@ -7,6 +7,7 @@ export async function addSurfSession(session: {
   waves: string;
   rating: number;
   notes: string;
+  board?: string;
 }, userId: string) {
   const { error } = await supabase.from('surf_sessions').insert([
     { ...session, user_id: userId }
