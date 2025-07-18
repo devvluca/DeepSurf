@@ -8,6 +8,7 @@ import Map from "./pages/Map";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
 import Account from "./pages/Account";
+import AITraining from "./pages/AITraining";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/components/AuthContext";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
@@ -28,6 +29,7 @@ function App() {
               <Route path="/map" element={<Map />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/account" element={<Account />} />
+              <Route path="/ai-training" element={<AITraining />} />
               <Route path="/about" element={<About />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

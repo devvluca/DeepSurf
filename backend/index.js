@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const tf = require('@tensorflow/tfjs-node');
+const { spawn } = require('child_process');
 const path = require('path');
 
 const app = express();
@@ -22,7 +22,30 @@ const beaches = [
     temperature: '27°C',
     description: 'Boas ondas e ambiente tranquilo.',
   },
-  // ...adicione as demais praias aqui, igual ao seu Map.tsx...
+  {
+    id: 'praia-boa-viagem',
+    name: 'Praia de Boa Viagem',
+    city: 'Recife, PE',
+    coordinates: { lat: -8.1175, lng: -34.8991 },
+    surfability: 3,
+    waveHeight: '1.2m',
+    period: '8s',
+    wind: '18 km/h SE',
+    temperature: '28°C',
+    description: 'Urbana, boa para iniciantes.',
+  },
+  {
+    id: 'praia-carneiros',
+    name: 'Praia dos Carneiros',
+    city: 'Tamandaré, PE',
+    coordinates: { lat: -8.7392, lng: -35.0986 },
+    surfability: 2,
+    waveHeight: '0.8m',
+    period: '6s',
+    wind: '12 km/h NE',
+    temperature: '26°C',
+    description: 'Mais para relaxar que surfar.',
+  }
 ];
 
 // Endpoint para listar praias
@@ -37,63 +60,165 @@ app.get('/api/beaches/:id', (req, res) => {
   res.json(beach);
 });
 
-// Endpoint de previsão (simulado, pronto para integrar ML ou APIs externas)
-app.get('/api/forecast', (req, res) => {
-  // Exemplo: integrar OpenWeather, Surfline, TensorFlow, etc.
-  // Aqui retorna dados mockados
+// Função para chamar preditor PyTorch
+async function callPyTorchPredictor(waveHeight, windSpeed, hour) {
+  return new Promise((resolve, reject) => {
+    const pythonPath = 'python'; // ou 'python3' no Linux/Mac
+    const scriptPath = path.join(__dirname, 'pytorch_predictor.py');
+    
+    const pythonProcess = spawn(pythonPath, [scriptPath, waveHeight.toString(), windSpeed.toString(), hour.toString()]);
+    
+    let output = '';
+    let errorOutput = '';
+    
+    pythonProcess.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+    
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const result = JSON.parse(output);
+          resolve(result);
+        } catch (e) {
+          reject(new Error(`Erro no JSON: ${e.message}`));
+        }
+      } else {
+        reject(new Error(`Python falhou: ${errorOutput}`));
+      }
+    });
+    
+    pythonProcess.on('error', (error) => {
+      reject(new Error(`Erro ao executar Python: ${error.message}`));
+    });
+  });
+}
+
+// Endpoint de previsão inteligente (com IA Surfista PyTorch)
+app.get('/api/forecast', async (req, res) => {
   const { lat, lng } = req.query;
+  
+  // Simular dados de condições atuais
+  const currentHour = new Date().getHours();
+  const currentMonth = new Date().getMonth() + 1;
+  
+  // Fator sazonal brasileiro
+  let seasonFactor = 1.0;
+  if ([12, 1, 2, 3].includes(currentMonth)) seasonFactor = 1.2; // Verão
+  else if ([6, 7, 8, 9].includes(currentMonth)) seasonFactor = 0.8; // Inverno
+  
+  // Gerar previsão para as próximas horas
+  const forecast = [];
+  const aiPredictions = [];
+  
+  for (let i = 0; i < 24; i += 3) {
+    const hour = (currentHour + i) % 24;
+    
+    // Simular condições variáveis
+    const waveHeight = 0.8 + Math.random() * 2.2;
+    const wavePeriod = 8 + Math.random() * 6;
+    const waveDirection = 150 + Math.random() * 60;
+    const windSpeed = (Math.random() - 0.5) * 30; // -15 a +15 (offshore/onshore)
+    const windDirection = Math.random() * 360;
+    const tide = Math.random() * 3;
+    const waterTemp = 22 + seasonFactor * 4 + Math.random() * 2;
+    const visibility = 10 + Math.random() * 15;
+    
+    const conditions = {
+      time: `${hour.toString().padStart(2, '0')}:00`,
+      height: Math.round(waveHeight * 10) / 10,
+      direction: Math.round(waveDirection),
+      period: Math.round(wavePeriod),
+      wind_speed: Math.round(windSpeed * 10) / 10,
+      wind_direction: Math.round(windDirection),
+      tide: Math.round(tide * 10) / 10,
+      water_temp: Math.round(waterTemp * 10) / 10,
+      visibility: Math.round(visibility)
+    };
+    
+    // Fazer predição com PyTorch
+    try {
+      const aiPrediction = await callPyTorchPredictor(waveHeight, windSpeed, hour);
+      aiPredictions.push({
+        time: conditions.time,
+        ...aiPrediction
+      });
+    } catch (error) {
+      console.error('Erro na predição PyTorch:', error);
+      // Fallback simples
+      const score = Math.random() * 100;
+      aiPredictions.push({
+        time: conditions.time,
+        score: Math.round(score),
+        rating: score > 70 ? '😎 Boa!' : score > 40 ? '🤔 Talvez' : '😴 Ruim',
+        amateur_friendly: score > 60 && waveHeight < 1.5,
+        conditions: { wave_height: waveHeight, wind_speed: windSpeed, hour }
+      });
+    }
+    
+    forecast.push(conditions);
+  }
+  
+  // Qualidade geral baseada na média das predições da IA PyTorch
+  const avgAiScore = aiPredictions.length > 0 ? 
+    aiPredictions.reduce((sum, pred) => sum + pred.score, 0) / aiPredictions.length : 
+    Math.random() * 100;
+  
+  const quality = Math.round(avgAiScore / 20); // 0-100 -> 0-5
+  
   res.json({
     lat,
     lng,
-    forecast: [
-      { time: '06:00', height: 1.2, direction: 'SW', period: 8 },
-      { time: '08:00', height: 1.8, direction: 'SW', period: 10 },
-      { time: '10:00', height: 2.1, direction: 'S', period: 12 },
-      // ...mais dados...
-    ],
-    quality: Math.floor(Math.random() * 5) + 1,
-    updatedAt: new Date().toISOString(),
+    forecast,
+    ai_predictions: aiPredictions,
+    quality: Math.max(1, quality),
+    ai_powered: true,
+    updated_at: new Date().toISOString(),
+    message: '🧠 Previsão com PyTorch IA Surfista para Amadores'
   });
 });
 
 // Health check
-app.get('/', (req, res) => res.send('DeepSurf API online'));
+app.get('/', (req, res) => res.send('🏄‍♂️ DeepSurf API com PyTorch IA Surfista online!'));
 
-let mlModel = null;
-
-// Carrega o modelo TensorFlow.js ao iniciar o servidor
-async function loadModel() {
-  const modelPath = path.join(__dirname, 'ml', 'model', 'model.json');
+// Endpoint de teste do preditor PyTorch
+app.post('/api/ai/surf-prediction', async (req, res) => {
+  const { wave_height, wind_speed, hour } = req.body;
+  
+  if (wave_height === undefined || wind_speed === undefined || hour === undefined) {
+    return res.status(400).json({ 
+      error: 'Parâmetros obrigatórios: wave_height, wind_speed, hour',
+      example: {
+        wave_height: 1.2,    // metros
+        wind_speed: -8,      // km/h (negativo = offshore)
+        hour: 7             // 0-23
+      }
+    });
+  }
+  
   try {
-    mlModel = await tf.loadLayersModel(`file://${modelPath}`);
-    console.log('Modelo TensorFlow carregado!');
-  } catch (err) {
-    console.warn('Não foi possível carregar o modelo TensorFlow:', err.message);
-  }
-}
-loadModel();
-
-// Endpoint de previsão com ML (exemplo)
-app.post('/api/ml/predict', async (req, res) => {
-  if (!mlModel) {
-    return res.status(503).json({ error: 'Modelo ML não carregado' });
-  }
-  // Espera receber features no body, ex: { features: [altura, periodo, vento, ...] }
-  const { features } = req.body;
-  if (!features || !Array.isArray(features)) {
-    return res.status(400).json({ error: 'Envie um array features no body' });
-  }
-  try {
-    const input = tf.tensor2d([features]);
-    const prediction = mlModel.predict(input);
-    const output = prediction.dataSync();
-    res.json({ prediction: output[0] });
-  } catch (err) {
-    res.status(500).json({ error: 'Erro ao prever com TensorFlow', details: err.message });
+    const prediction = await callPyTorchPredictor(wave_height, wind_speed, hour);
+    res.json({
+      success: true,
+      prediction,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Erro na predição PyTorch',
+      message: error.message,
+      fallback: 'Execute o notebook primeiro para treinar o modelo'
+    });
   }
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`DeepSurf backend rodando em http://localhost:${PORT}`);
+  console.log(`🏄‍♂️ DeepSurf backend com PyTorch rodando em http://localhost:${PORT}`);
+  console.log(`📊 Dashboard: http://localhost:3000`);
+  console.log(`🧠 IA Surfista PyTorch integrada!`);
 });

@@ -3,9 +3,10 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-import { ArrowRight, Waves, TrendingUp, MapPin, Bell, Wind, Thermometer, Activity, Star, Users, ArrowUp } from 'lucide-react';
-import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar } from 'recharts';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowRight, Waves, TrendingUp, MapPin, Bell, Wind, Thermometer, Activity, Star, Users, ArrowUp, Brain, Zap } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, BarChart, Bar, LineChart, Line } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 
 // Função para converter direção textual para ângulo (graus)
@@ -260,9 +261,10 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   className="bg-white text-ocean-900 hover:bg-ocean-50 text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4 w-full sm:w-auto"
-                  onClick={() => navigate('/account')}
+                  onClick={() => navigate('/ai-training')}
                 >
-                  Começar Agora
+                  <Brain className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Ver IA Funcionando
                   <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
                 <Button
